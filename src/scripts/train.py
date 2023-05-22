@@ -8,7 +8,7 @@ from pytorch_lightning import loggers
 from torchvision.transforms import Compose
 
 from src.data.data import PanoramicDataset
-from src.model.faster_r_cnn import FasterRCNN
+from src.model.faster_rcnn import FasterRCNN
 from src.utils.transforms import PadToSize
 
 if __name__ == "__main__":
