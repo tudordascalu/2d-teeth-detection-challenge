@@ -1,5 +1,4 @@
 import torch
-import torch.nn as nn
 import torchvision
 import pytorch_lightning as pl
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
