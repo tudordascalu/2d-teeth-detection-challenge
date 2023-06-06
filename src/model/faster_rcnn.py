@@ -1,6 +1,7 @@
 import torch
 import torchvision
 import pytorch_lightning as pl
+from torchmetrics.detection.mean_ap import MeanAveragePrecision
 from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
 
 
@@ -14,6 +15,8 @@ class FasterRCNN(pl.LightningModule):
         # Replace the classifier head with a new one to match the number of classes
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = FastRCNNPredictor(in_features, self.config["n_teeth"] + 1)
+        # Average precision
+        self.map_metric = MeanAveragePrecision("multiclass")
 
     def forward(self, images, targets=None):
         return self.model(images, targets)
@@ -22,7 +25,7 @@ class FasterRCNN(pl.LightningModule):
         images, targets = batch
         loss_dict = self.forward(images, targets)
         loss = sum(loss for loss in loss_dict.values())
-        self.log('train_loss', loss)
+        self.log('train_loss', loss, on_step=False, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -31,9 +34,17 @@ class FasterRCNN(pl.LightningModule):
         self.model.train()
         loss_dict = self.forward(images, targets)
         loss = sum(loss for loss in loss_dict.values())
+        # Set model in eval mode to obtain predictions
         self.model.eval()
-        self.log('val_loss', loss)
+        predictions = self.model(images)
+        self.map_metric.update(predictions, targets)
+        self.log('val_loss', loss, on_step=False, on_epoch=True)
+
+    def validation_epoch_end(self, outputs):
+        self.log('val_map', self.map_metric.compute(), on_epoch=True)
+        self.map_metric.reset()
 
     def configure_optimizers(self):
+        # TODO: replace with rmsprop
         optimizer = torch.optim.SGD(self.parameters(), lr=float(self.config["learning_rate"]), momentum=0.9)
         return optimizer

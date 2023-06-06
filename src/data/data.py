@@ -6,11 +6,6 @@ from src.utils.label_encoder import LabelEncoder
 
 
 class PanoramicDataset(Dataset):
-    """
-    Scope:
-        This class is responsible for returning voxelized images and masks.
-    """
-
     def __init__(self, dataset, image_dir, transforms=lambda x: x):
         self.dataset = dataset
         self.image_dir = image_dir
