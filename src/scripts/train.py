@@ -44,5 +44,5 @@ if __name__ == "__main__":
     if device.type == "cpu":
         trainer = Trainer(**trainer_args)
     else:
-        trainer = Trainer(accelerator="gpu", strategy="ddp", devices=4, **trainer_args)
+        trainer = Trainer(accelerator="gpu", strategy="ddp", devices=2, **trainer_args)
     trainer.fit(model=model, train_dataloaders=loader_train, val_dataloaders=loader_val)

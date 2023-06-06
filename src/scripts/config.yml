@@ -1,11 +1,9 @@
 image_dir: data/raw/training_data
 #output_path: output/aligner/
 checkpoints_path: checkpoints/
-max_epochs: 50
+max_epochs: 100
 batch_size: 8
-learning_rate: 1e-4
-#weight_decay: 1e-8
-#scheduler_patience: 10
+learning_rate: 1e-3
 data_type: quadrant_enumeration
 n_teeth: 32
-target_size: [1536, 3139]
+target_size: [ 1536, 3139 ]
