@@ -16,7 +16,7 @@ class FasterRCNN(pl.LightningModule):
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = FastRCNNPredictor(in_features, self.config["n_teeth"] + 1)
         # Average precision
-        self.map_metric = MeanAveragePrecision("multiclass")
+        self.map_metric = MeanAveragePrecision(box_format="xyxy")
 
     def forward(self, images, targets=None):
         return self.model(images, targets)
@@ -25,7 +25,7 @@ class FasterRCNN(pl.LightningModule):
         images, targets = batch
         loss_dict = self.forward(images, targets)
         loss = sum(loss for loss in loss_dict.values())
-        self.log('train_loss', loss, on_step=False, on_epoch=True)
+        self.log('train_loss', loss, on_step=True, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -38,10 +38,13 @@ class FasterRCNN(pl.LightningModule):
         self.model.eval()
         predictions = self.model(images)
         self.map_metric.update(predictions, targets)
-        self.log('val_loss', loss, on_step=False, on_epoch=True)
+        self.log("val_loss", loss, on_step=True, on_epoch=True)
 
     def validation_epoch_end(self, outputs):
-        self.log('val_map', self.map_metric.compute(), on_epoch=True)
+        map_dict = self.map_metric.compute()
+        self.log("val_ap", map_dict["map"], on_epoch=True)
+        self.log("val_ap_50", map_dict["map_50"], on_epoch=True)
+        self.log("val_ap_75", map_dict["map_75"], on_epoch=True)
         self.map_metric.reset()
 
     def configure_optimizers(self):

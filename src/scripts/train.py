@@ -16,8 +16,8 @@ if __name__ == "__main__":
         config = yaml.safe_load(f)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     y_train, y_val, y_test = np.load("data/final/y_quadrant_enumeration_train.npy", allow_pickle=True), \
-                             np.load("data/final/y_quadrant_enumeration_val.npy", allow_pickle=True), \
-                             np.load("data/final/y_quadrant_enumeration_test.npy", allow_pickle=True)
+        np.load("data/final/y_quadrant_enumeration_val.npy", allow_pickle=True), \
+        np.load("data/final/y_quadrant_enumeration_test.npy", allow_pickle=True)
     # Define dataset
     # transforms = Compose([
     #     PadToSize(np.array(config["target_size"]).astype(np.int32)),
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     model = FasterRCNN(config)
     logger = loggers.TensorBoardLogger(save_dir=config["checkpoints_path"], name=None)
     trainer_args = dict(max_epochs=config["max_epochs"],
-                        callbacks=[ModelCheckpoint(save_top_k=1,
+                        callbacks=[ModelCheckpoint(save_top_k=2,
                                                    monitor="val_loss",
                                                    mode="min")],
                         logger=logger,
