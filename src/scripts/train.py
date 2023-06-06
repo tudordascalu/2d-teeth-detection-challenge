@@ -40,7 +40,7 @@ if __name__ == "__main__":
                                                    monitor="val_loss",
                                                    mode="min")],
                         logger=logger,
-                        log_every_n_steps=100)
+                        log_every_n_steps=5)
     if device.type == "cpu":
         trainer = Trainer(**trainer_args)
     else:
