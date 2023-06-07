@@ -47,6 +47,18 @@ class FasterRCNN(pl.LightningModule):
         self.log("val_ap_75", map_dict["map_75"], on_epoch=True)
         self.map_metric.reset()
 
+    def test_step(self, batch, batch_idx):
+        images, targets = batch
+        predictions = self.model(images)
+        self.map_metric.update(predictions, targets)
+
+    def test_epoch_end(self, outputs):
+        map_dict = self.map_metric.compute()
+        self.log("test_ap", map_dict["map"], on_epoch=True)
+        self.log("test_ap_50", map_dict["map_50"], on_epoch=True)
+        self.log("test_ap_75", map_dict["map_75"], on_epoch=True)
+        self.map_metric.reset()
+
     def configure_optimizers(self):
         # TODO: replace with rmsprop
         optimizer = torch.optim.SGD(self.parameters(), lr=float(self.config["learning_rate"]), momentum=0.9)

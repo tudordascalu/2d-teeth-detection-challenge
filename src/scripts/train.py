@@ -34,7 +34,8 @@ if __name__ == "__main__":
     trainer_args = dict(max_epochs=config["max_epochs"],
                         callbacks=[ModelCheckpoint(save_top_k=2,
                                                    monitor="val_loss",
-                                                   mode="min")],
+                                                   mode="min",
+                                                   filename="epoch={epoch:02d}-val_loss={val_loss:.2f}")],
                         logger=logger,
                         log_every_n_steps=5)
     if device.type == "cpu":
