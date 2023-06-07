@@ -1,5 +1,5 @@
 image_dir: data/raw/training_data
-#output_path: output/aligner/
+output_path: output/
 checkpoints_path: checkpoints/
 max_epochs: 100
 batch_size: 8

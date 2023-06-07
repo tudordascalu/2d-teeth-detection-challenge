@@ -1,3 +1,6 @@
+import os
+
+import numpy as np
 import torch
 import torchvision
 import pytorch_lightning as pl
@@ -22,14 +25,14 @@ class FasterRCNN(pl.LightningModule):
         return self.model(images, targets)
 
     def training_step(self, batch, batch_idx):
-        images, targets = batch
+        images, targets = batch["image"], batch["targets"]
         loss_dict = self.forward(images, targets)
         loss = sum(loss for loss in loss_dict.values())
         self.log('train_loss', loss, on_step=True, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        images, targets = batch
+        images, targets = batch["image"], batch["targets"]
         # Set model in training mode to get access to losses
         self.model.train()
         loss_dict = self.forward(images, targets)
@@ -48,7 +51,7 @@ class FasterRCNN(pl.LightningModule):
         self.map_metric.reset()
 
     def test_step(self, batch, batch_idx):
-        images, targets = batch
+        images, targets = batch["image"], batch["targets"]
         predictions = self.model(images)
         self.map_metric.update(predictions, targets)
 
@@ -58,6 +61,19 @@ class FasterRCNN(pl.LightningModule):
         self.log("test_ap_50", map_dict["map_50"], on_epoch=True)
         self.log("test_ap_75", map_dict["map_75"], on_epoch=True)
         self.map_metric.reset()
+
+    def on_predict_start(self):
+        if not os.path.exists(f"{self.config['output_path']}"):
+            os.mkdir(f"{self.config['output_path']}")
+
+    def predict_step(self, batch, batch_idx):
+        images, targets, ids = batch["image"], batch["targets"], batch["id"]
+        predictions = self.model(images)
+        for image, target, id, prediction in zip(images, targets, ids, predictions):
+            if not os.path.exists(f"{self.config['output_path']}/{id}"):
+                os.mkdir(f"{self.config['output_path']}/{id}")
+            np.save(f"{self.config['output_path']}/{id}/targets.npy", target)
+            np.save(f"{self.config['output_path']}/{id}/predictions.npy", prediction)
 
     def configure_optimizers(self):
         # TODO: replace with rmsprop

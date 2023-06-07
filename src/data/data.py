@@ -17,7 +17,7 @@ class PanoramicDataset(Dataset):
         image = read_image(f"{self.image_dir}/{image_data['file_name']}")[0].unsqueeze(0) / 255
         image = self.transforms(image)
         targets = self._get_targets(image_data["annotations"])
-        return image, targets
+        return {"image": image, "targets": targets, "id": image_data['file_name'].split(".")[0]}
 
     def _get_targets(self, annotations):
         boxes = torch.tensor(list(map(lambda x: x["bbox"], annotations)), dtype=torch.float32)
@@ -33,7 +33,9 @@ class PanoramicDataset(Dataset):
     def collate_fn(batch):
         images = []
         targets = []
+        ids = []
         for b in batch:
-            images.append(b[0])
-            targets.append(b[1])
-        return images, targets
+            images.append(b["image"])
+            targets.append(b["targets"])
+            ids.append(b["id"])
+        return {"image": images, "targets": targets, "id": ids}

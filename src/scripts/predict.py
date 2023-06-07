@@ -23,8 +23,9 @@ if __name__ == "__main__":
     loader_test = DataLoader(dataset_test, **loader_args)
     # Define model
     model = FasterRCNN.load_from_checkpoint(f"checkpoints/{checkpoint['version']}/checkpoints/{checkpoint['model']}")
+    model.hparams.config["output_path"] = f"output/{checkpoint['version']}__{checkpoint['model'].split('.')[0]}"
     if device.type == "cpu":
         trainer = Trainer()
     else:
         trainer = Trainer(accelerator="gpu", strategy="ddp", devices=2)
-    trainer.test(model, dataloaders=loader_test)
+    trainer.predict(model, dataloaders=loader_test)
