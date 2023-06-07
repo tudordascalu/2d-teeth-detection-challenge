@@ -13,8 +13,7 @@ def get_annotations(image_id, y):
 
 def process_annotations(annotations):
     """
-    :param annotations:
-    :return:
+    :return: list of annotations with different format for bbox, i.e (x1,y1,x2,y2) instead of (x1,y1,w,h)
     """
     for annotation in annotations:
         x, y, w, h = annotation["bbox"]

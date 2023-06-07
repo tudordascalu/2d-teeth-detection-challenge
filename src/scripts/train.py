@@ -5,23 +5,19 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader
 from pytorch_lightning import loggers
-from torchvision.transforms import Compose
 
 from src.data.data import PanoramicDataset
 from src.model.faster_rcnn import FasterRCNN
-from src.utils.transforms import PadToSize
 
 if __name__ == "__main__":
     with open("./src/scripts/config.yml", "r") as f:
         config = yaml.safe_load(f)
+    # Find out whether gpu is available
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    # Load train val test splits
     y_train, y_val, y_test = np.load("data/final/y_quadrant_enumeration_train.npy", allow_pickle=True), \
         np.load("data/final/y_quadrant_enumeration_val.npy", allow_pickle=True), \
         np.load("data/final/y_quadrant_enumeration_test.npy", allow_pickle=True)
-    # Define dataset
-    # transforms = Compose([
-    #     PadToSize(np.array(config["target_size"]).astype(np.int32)),
-    # ])
     dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays")
     dataset_train = PanoramicDataset(y_train, **dataset_args)
     dataset_val = PanoramicDataset(y_val, **dataset_args)
