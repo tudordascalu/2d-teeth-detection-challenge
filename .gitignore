@@ -3,3 +3,4 @@ checkpoints/*
 .idea/*
 output/*
 notebooks/*
+visualizations/*

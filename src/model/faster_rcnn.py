@@ -1,4 +1,5 @@
 import os
+import pickle
 
 import numpy as np
 import torch
@@ -72,8 +73,18 @@ class FasterRCNN(pl.LightningModule):
         for image, target, id, prediction in zip(images, targets, ids, predictions):
             if not os.path.exists(f"{self.config['output_path']}/{id}"):
                 os.mkdir(f"{self.config['output_path']}/{id}")
-            np.save(f"{self.config['output_path']}/{id}/targets.npy", target)
-            np.save(f"{self.config['output_path']}/{id}/predictions.npy", prediction)
+            # Convert to cpu tensors
+            for key, value in target.items():
+                if isinstance(value, torch.Tensor):
+                    target[key] = value.detach().cpu().numpy()
+            for key, value in prediction.items():
+                if isinstance(value, torch.Tensor):
+                    prediction[key] = value.detach().cpu().numpy()
+            # Save dictionaries
+            with open(f"{self.config['output_path']}/{id}/targets.npy", "wb") as file:
+                pickle.dump(target, file)
+            with open(f"{self.config['output_path']}/{id}/predictions.npy", "wb") as file:
+                pickle.dump(prediction, file)
 
     def configure_optimizers(self):
         # TODO: replace with rmsprop
