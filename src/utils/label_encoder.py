@@ -5,7 +5,8 @@ class LabelEncoder:
     def __init__(self):
         # Set possible tooth labels considering that 0 is used for background and we have 1-8 teeth for each quadrant
         labels = np.concatenate(
-            ([0], np.arange(1, 9), np.arange(1, 9) + 10, np.arange(1, 9) + 20, np.arange(1, 9) + 30)).tolist()
+            ([0], (np.arange(1, 9) + 10)[::-1], np.arange(1, 9), (np.arange(1, 9) + 30)[::-1],
+             np.arange(1, 9) + 20)).tolist()
         self.fit(labels)
 
     def fit(self, labels):
