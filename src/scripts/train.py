@@ -15,10 +15,10 @@ if __name__ == "__main__":
     # Find out whether gpu is available
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Load train val test splits
-    y_train, y_val, y_test = np.load("data/final/y_quadrant_enumeration_train.npy", allow_pickle=True), \
-        np.load("data/final/y_quadrant_enumeration_val.npy", allow_pickle=True), \
-        np.load("data/final/y_quadrant_enumeration_test.npy", allow_pickle=True)
-    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays")
+    y_train, y_val, y_test = np.load(f"data/final/y_{config['data_type']}_train.npy", allow_pickle=True), \
+        np.load(f"data/final/y_{config['data_type']}_val.npy", allow_pickle=True), \
+        np.load(f"data/final/y_{config['data_type']}_test.npy", allow_pickle=True)
+    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays", data_type=config["data_type"])
     dataset_train = PanoramicDataset(y_train, **dataset_args)
     dataset_val = PanoramicDataset(y_val, **dataset_args)
     dataset_test = PanoramicDataset(y_test, **dataset_args)

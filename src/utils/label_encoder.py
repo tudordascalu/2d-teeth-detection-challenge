@@ -17,3 +17,17 @@ class LabelEncoder:
     def inverse_transform(self, encoded_labels):
         decoder = {i: label for label, i in self.encoder.items()}
         return np.array([decoder[encoded_label] for encoded_label in encoded_labels])
+
+
+class LabelProcessor:
+    def __init__(self):
+        pass
+
+    def __call__(self, category_id_1, category_id_2):
+        """
+
+        :param category_id_1: int in [0, 3]
+        :param category_id_2: int in [0, 7]
+        :return: <category_id> * 10 + <category_id_2> + 1
+        """
+        return category_id_1 * 10 + category_id_2 + 1

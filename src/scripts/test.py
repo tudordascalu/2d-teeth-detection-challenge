@@ -15,7 +15,7 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Load test split
     y_test = np.load("data/final/y_quadrant_enumeration_test.npy", allow_pickle=True)
-    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays")
+    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays", data_type=config["data_type"])
     dataset_test = PanoramicDataset(y_test, **dataset_args)
     # Define dataloader
     loader_args = dict(batch_size=config["batch_size"], num_workers=0, pin_memory=True,
