@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import loggers
 
 from src.data.data import PanoramicDataset
-from src.model.faster_rcnn import FasterRCNN
+from src.model.faster_rcnn.faster_rcnn import FasterRCNN
 
 if __name__ == "__main__":
     with open("./src/scripts/config.yml", "r") as f:

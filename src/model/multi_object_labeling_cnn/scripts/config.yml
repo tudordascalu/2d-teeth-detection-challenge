@@ -1,0 +1,20 @@
+# Data
+output_path: output/
+checkpoints_path: checkpoints/multi_object_labeling_cnn
+
+# Model
+max_epochs: 100
+batch_size: 8
+learning_rate: 1e-4
+weight_decay: 1e-8
+scheduler_patience: 10
+lambda: .8
+
+# Augmentation
+p_remove: .5
+max_remove: 4
+p_swap: .5
+max_swap: 3
+p_shift: .5
+max_dist_shift: 10
+max_count_shift: 5

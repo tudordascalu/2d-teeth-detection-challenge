@@ -5,36 +5,7 @@ import numpy as np
 from tqdm import tqdm
 
 from src.utils.label_encoder import LabelProcessor, LabelEncoder
-
-
-class ObjectCentroidMapper:
-    def __init__(self):
-        pass
-
-    def __call__(self, box):
-        """
-
-        :param box: list with 4 elements corresponding to x1y1x2y2
-        :return: (x1+x2)/2, (y1+y2)/2
-        """
-        return (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
-
-
-class InterObjectDistanceMapper:
-    def __init__(self):
-        pass
-
-    def __call__(self, centroids):
-        """
-        :param centroids: list of centroids of shape (32, 2)
-        :return: matrix including inter teeth distances for each axis
-        """
-        inter_teeth_distance_mat = np.zeros((32, 32, 2), dtype=np.float32)
-        labels = np.where(~(centroids == [0, 0]).all(axis=1))
-        for label, centroid in enumerate(centroids):
-            inter_teeth_distance_mat[label, labels] = centroids[labels] - centroid
-        return inter_teeth_distance_mat
-
+from src.utils.multi_object_labelling import ObjectCentroidMapper, InterObjectDistanceMapper
 
 if __name__ == "__main__":
     # Load data
