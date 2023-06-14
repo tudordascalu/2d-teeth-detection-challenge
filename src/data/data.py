@@ -5,7 +5,7 @@ from torch.utils.data import Dataset
 from torchvision.io import read_image
 
 from src.utils.label_encoder import LabelEncoder
-from src.utils.multi_object_labelling import InterObjectDistanceMapper, InterObjectScoreMapper, \
+from src.utils.multi_object_labeling import InterObjectDistanceMapper, InterObjectScoreMapper, \
     MultiObjectCentroidMapper
 
 

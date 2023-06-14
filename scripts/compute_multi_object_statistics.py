@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 
 from src.utils.label_encoder import LabelProcessor, LabelEncoder
-from src.utils.multi_object_labelling import ObjectCentroidMapper, InterObjectDistanceMapper
+from src.utils.multi_object_labeling import ObjectCentroidMapper, InterObjectDistanceMapper
 
 if __name__ == "__main__":
     # Load data

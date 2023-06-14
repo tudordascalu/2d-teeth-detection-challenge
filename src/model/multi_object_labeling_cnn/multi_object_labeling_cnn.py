@@ -7,7 +7,7 @@ from torch.nn.functional import softmax
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-from src.utils.multi_object_labelling import AssignmentSolver
+from src.utils.multi_object_labeling import AssignmentSolver
 
 
 class MultiObjectLabelingCNN(pl.LightningModule):
