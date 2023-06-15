@@ -19,7 +19,7 @@ def assign_prediction_eval_labels(targets, predictions, iou_threshold=0.5):
     target_boxes = targets["boxes"]
     target_labels = encoder.inverse_transform(np.array(targets["labels"]))
     prediction_boxes = predictions["boxes"]
-    prediction_labels = encoder.inverse_transform(np.array(predictions["labels"]))
+    prediction_labels = encoder.inverse_transform(np.array(predictions["labels"]) + 1)
     # Initialize label accumulator
     prediction_eval_labels = np.zeros(len(prediction_labels), dtype=np.int32)
     iou_mat = box_iou(torch.tensor(target_boxes), torch.tensor(prediction_boxes))
@@ -52,24 +52,25 @@ def assign_prediction_eval_labels(targets, predictions, iou_threshold=0.5):
 
 
 if __name__ == "__main__":
-    task = "quadrant"
+    suffix = "processed"
+    task = "quadrant_enumeration"
     colors = np.load("../data/assets/colors.npy")
-    checkpoint = "version_5__epoch=epoch=97-val_loss=val_loss=0"
+    checkpoint = "version_3__epoch=76-step=2156"
     if not os.path.exists(f"../visualizations/{checkpoint}"):
         os.mkdir(f"../visualizations/{checkpoint}")
     output_path = f"../output/{checkpoint}"
     data_path = "../data/raw/training_data"
     ids = [path.split("/")[-1] for path in glob.glob(f"{output_path}/*")]
-    unique_class_nms_processor = UniqueClassNMSProcessor(iou_threshold=.5)
+    # unique_class_nms_processor = UniqueClassNMSProcessor(iou_threshold=.75)
     for id in tqdm(ids, total=len(ids)):
         # Load data
         image = plt.imread(f"{data_path}/{task}/xrays/{id}.png")[:, :, 0]
         with open(f"{output_path}/{id}/targets.npy", "rb") as file:
             targets = pickle.load(file)
-        with open(f"{output_path}/{id}/predictions.npy", "rb") as file:
+        with open(f"{output_path}/{id}/predictions_{suffix}.npy", "rb") as file:
             predictions = pickle.load(file)
         # Overlap targets and boxes on image
-        predictions = unique_class_nms_processor(predictions)
+        # predictions = unique_class_nms_processor(predictions)
         prediction_eval_labels = assign_prediction_eval_labels(targets, predictions, iou_threshold=.6)
         fig, ax = plt.subplots(nrows=2, ncols=1)
         # Display the image
@@ -89,4 +90,4 @@ if __name__ == "__main__":
         ax[0].set_title("Ground truth")
         ax[1].set_title("Predictions (G - correct, R - wrong)")
         fig.subplots_adjust(hspace=.3)
-        fig.savefig(f"../visualizations/{checkpoint}/{id}.png", dpi=300)
+        fig.savefig(f"../visualizations/{checkpoint}/{id}_{suffix}.png", dpi=300)

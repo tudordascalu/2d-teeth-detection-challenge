@@ -8,6 +8,6 @@
 ## Activate environment
 #conda activate ml-env
 # Train network
-echo "Predicting started.."
-python -m src.scripts.predict
-echo "Predicting ended.."
+echo "Training started.."
+python -m src.model.faster_rcnn.scripts.train
+echo "Training ended.."

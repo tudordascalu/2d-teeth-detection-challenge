@@ -9,5 +9,5 @@
 #conda activate ml-env
 # Train network
 echo "Training started.."
-python -m src.scripts.train
+python -m src.model.multi_object_labeling_cnn.scripts.train
 echo "Training ended.."
