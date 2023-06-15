@@ -6,11 +6,11 @@ from scipy.optimize import linear_sum_assignment
 
 
 class InterObjectScoreMapper:
-    def __init__(self, inter_object_distance_mat_mean, inter_object_distance_mat_std, n_teeth=32, missing_score=-1,
+    def __init__(self, inter_object_distance_mat_mean, inter_object_distance_mat_std, n_objects=32, missing_score=-1,
                  diagonal_score=0):
         self.inter_object_distance_mat_mean = inter_object_distance_mat_mean
         self.inter_object_distance_mat_std = inter_object_distance_mat_std
-        self.n_teeth = n_teeth
+        self.n_objects = n_objects
         self.missing_score = missing_score
         self.diagonal_score = diagonal_score
 
@@ -22,10 +22,9 @@ class InterObjectScoreMapper:
         :param inter_object_distance_mat_std: np.array of shape (32, 32, 2) featuring stds for tooth-tooth pair distances
         :return: np.array of shape (32, 32) denoting tooth-tooth probabilities based on distances
         """
-        inter_objects_score_mat = np.zeros((self.n_teeth, self.n_teeth, 1))
-        # Navigate through all instances [0, 17]
-        for i in range(self.n_teeth):
-            for j in range(self.n_teeth):
+        inter_objects_score_mat = np.zeros((self.n_objects, self.n_objects, 1))
+        for i in range(self.n_objects):
+            for j in range(self.n_objects):
                 inter_object_distance = inter_object_distance_mat[i, j]
                 inter_object_distance_mean = self.inter_object_distance_mat_mean[i, j]
                 inter_object_distance_std = self.inter_object_distance_mat_std[i, j]
@@ -40,22 +39,22 @@ class InterObjectScoreMapper:
                 except:
                     score = 0
                 inter_objects_score_mat[i, j] = score
-        # Update missing teeth scores
-        missing_teeth = np.where((centroids == np.array([0, 0])).all(axis=1))[0]
-        inter_objects_score_mat[missing_teeth] = self.missing_score
-        inter_objects_score_mat[:, missing_teeth] = self.missing_score
+        # Update missing objects scores
+        missing_objects = np.where((centroids == np.array([0, 0])).all(axis=1))[0]
+        inter_objects_score_mat[missing_objects] = self.missing_score
+        inter_objects_score_mat[:, missing_objects] = self.missing_score
         # Update diagonal scores
-        inter_objects_score_mat[np.arange(self.n_teeth), np.arange(self.n_teeth)] = self.diagonal_score
+        inter_objects_score_mat[np.arange(self.n_objects), np.arange(self.n_objects)] = self.diagonal_score
         return inter_objects_score_mat
 
 
 class MultiObjectCentroidMapper:
-    def __init__(self, n_teeth=32):
+    def __init__(self, n_objects=32):
         self.object_centroid_mapper = ObjectCentroidMapper()
-        self.n_teeth = n_teeth
+        self.n_objects = n_objects
 
     def __call__(self, boxes, labels):
-        object_centroids = np.zeros((32, 2), dtype=np.float32)
+        object_centroids = np.zeros((self.n_objects, 2), dtype=np.float32)
         for box, label in zip(boxes, labels):
             object_centroids[label - 1] = self.object_centroid_mapper(box)
         return object_centroids
@@ -81,13 +80,18 @@ class InterObjectDistanceMapper:
     def __call__(self, centroids):
         """
         :param centroids: list of centroids of shape (32, 2)
-        :return: matrix including inter teeth distances for each axis
+        :return: matrix including inter objects distances for each axis
         """
-        inter_teeth_distance_mat = np.zeros((32, 32, 2), dtype=np.float32)
-        labels = np.where(~(centroids == [0, 0]).all(axis=1))
-        for label, centroid in enumerate(centroids):
-            inter_teeth_distance_mat[label, labels] = centroids[labels] - centroid
-        return inter_teeth_distance_mat
+        # Initialize
+        inter_object_distance_mat = np.zeros((32, 32, 2), dtype=np.float32)
+
+        # Extract only objects that are present, centroid is not 0, 0
+        labels = np.where(~(centroids == [0, 0]).all(axis=1))[0]
+
+        # For each object centroid, fill in the distances to all other present objects
+        for label, centroid in zip(labels, centroids[labels]):
+            inter_object_distance_mat[label, labels] = centroids[labels] - centroid
+        return inter_object_distance_mat
 
 
 class AssignmentSolver:
