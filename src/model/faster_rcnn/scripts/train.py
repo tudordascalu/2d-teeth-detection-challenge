@@ -10,7 +10,7 @@ from src.data.data import PanoramicDataset
 from src.model.faster_rcnn.faster_rcnn import FasterRCNN
 
 if __name__ == "__main__":
-    with open("./src/scripts/config.yml", "r") as f:
+    with open("./src/model/faster_rcnn/scripts/config.yml", "r") as f:
         config = yaml.safe_load(f)
     # Find out whether gpu is available
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')

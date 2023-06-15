@@ -1,8 +1,11 @@
+# Data
 image_dir: data/raw/training_data
 output_path: output/
 checkpoints_path: checkpoints/faster_rcnn/
-max_epochs: 100
+data_type: quadrant_enumeration # quadrant | quadrant_enumeration | quadrant_enumeration_disease
+
+# Model
+max_epochs: 200
 batch_size: 8
 learning_rate: 1e-3
-data_type: quadrant_enumeration # quadrant | quadrant_enumeration | quadrant_enumeration_disease
 n_teeth: 32

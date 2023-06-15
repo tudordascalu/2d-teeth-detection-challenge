@@ -87,6 +87,5 @@ class FasterRCNN(pl.LightningModule):
                 pickle.dump(prediction, file)
 
     def configure_optimizers(self):
-        # TODO: replace with rmsprop
         optimizer = torch.optim.SGD(self.parameters(), lr=float(self.config["learning_rate"]), momentum=0.9)
         return optimizer
