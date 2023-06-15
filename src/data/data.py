@@ -100,8 +100,8 @@ class MultiObjectDataset(Dataset):
         labels = one_hot(labels, num_classes=32).squeeze(1).type(torch.float32)
 
         # Merge distance and score matrices
-        inputs = torch.concat((inter_object_distance_mat, inter_object_score_mat), dim=-1).permute(2, 0, 1)
-        return inputs, labels
+        input = torch.concat((inter_object_distance_mat, inter_object_score_mat), dim=-1).permute(2, 0, 1)
+        return input, labels
 
     def _get_boxes(self, annotations):
         boxes = torch.tensor(list(map(lambda x: x["bbox"], annotations)), dtype=torch.float32)
