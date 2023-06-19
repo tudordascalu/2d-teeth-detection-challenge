@@ -44,11 +44,11 @@ class FasterRCNN(pl.LightningModule):
         self.map_metric.update(predictions, targets)
         self.log("val_loss", loss, on_step=True, on_epoch=True)
 
-    def validation_epoch_end(self, outputs):
+    def on_validation_epoch_end(self):
         map_dict = self.map_metric.compute()
-        self.log("val_ap", map_dict["map"], on_epoch=True)
-        self.log("val_ap_50", map_dict["map_50"], on_epoch=True)
-        self.log("val_ap_75", map_dict["map_75"], on_epoch=True)
+        self.log("val_ap", map_dict["map"], on_epoch=True, sync_dist=True)
+        self.log("val_ap_50", map_dict["map_50"], on_epoch=True, sync_dist=True)
+        self.log("val_ap_75", map_dict["map_75"], on_epoch=True, sync_dist=True)
         self.map_metric.reset()
 
     def test_step(self, batch, batch_idx):
@@ -56,7 +56,7 @@ class FasterRCNN(pl.LightningModule):
         predictions = self.model(images)
         self.map_metric.update(predictions, targets)
 
-    def test_epoch_end(self, outputs):
+    def on_test_epoch_end(self):
         map_dict = self.map_metric.compute()
         self.log("test_ap", map_dict["map"], on_epoch=True)
         self.log("test_ap_50", map_dict["map_50"], on_epoch=True)

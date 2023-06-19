@@ -1,7 +1,6 @@
 import torch
 from torch.utils.data import Dataset
 from torchvision.io import read_image
-
 from src.utils.label_encoder import LabelEncoder
 
 
@@ -19,18 +18,21 @@ class PanoramicDataset(Dataset):
         sample = self.dataset[idx]
 
         # Load image, boxes, labels
-        image = read_image(f"{self.image_dir}/{sample['file_name']}").permute(1, 2, 0) / 255
+        image = read_image(f"{self.image_dir}/{sample['file_name']}")
         boxes = self._get_target_boxes(sample["annotations"])
         labels = self._get_target_labels(sample["annotations"])
 
         # Apply transformations, e.g. rotation, translation, noise
         if self.transform is not None:
-            image = image.numpy()
+            image = image.permute(1, 2, 0).numpy()
             boxes = boxes.numpy()
             transformed = self.transform(image=image, bboxes=boxes, class_labels=labels)
-            image = torch.tensor(transformed["image"], dtype=torch.float32)
+            image = torch.tensor(transformed["image"], dtype=torch.float32).permute(2, 0, 1)
             boxes = torch.tensor(transformed["bboxes"], dtype=torch.float32)
             labels = torch.tensor(transformed["class_labels"], dtype=torch.int64)
+
+        # Select only one dimension from image as it is greyscale
+        image = image[0].unsqueeze(0) / 255
 
         return {"image": image, "targets": dict(boxes=boxes, labels=labels), "id": sample['file_name'].split(".")[0]}
 
