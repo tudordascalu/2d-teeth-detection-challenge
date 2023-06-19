@@ -4,7 +4,7 @@ checkpoints_path: checkpoints/multi_object_labeling_cnn
 
 # Model
 max_epochs: 100
-batch_size: 8
+batch_size: 16
 learning_rate: 1e-4
 weight_decay: 1e-8
 scheduler_patience: 10

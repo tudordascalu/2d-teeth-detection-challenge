@@ -112,9 +112,9 @@ class MultiObjectLabelingCNN(pl.LightningModule):
         a = self.mse_loss(y_pred.reshape(-1, 32), y_true.reshape(-1, 32))
 
         # Process y_pred and y_true for binary cross entropy (BCE) calculation
-        y_pred_processed = y_pred.clone().detach().numpy()
+        y_pred_processed = y_pred.clone().cpu().detach().numpy()
         _, y_pred_processed = self.assignment_solver(y_pred_processed)
-        y_pred_processed = torch.from_numpy(y_pred_processed).type(torch.float32)
+        y_pred_processed = torch.from_numpy(y_pred_processed).type(torch.float32).to(self.device)
         y_pred_processed = (y_pred * y_pred_processed).reshape(-1, 1)
         y_pred_processed = torch.stack((1 - y_pred_processed, y_pred_processed), dim=1).squeeze()
         y_true_processed = y_true.reshape(-1, 1)
@@ -141,5 +141,5 @@ class MultiObjectLabelingCNN(pl.LightningModule):
 
         y_true_processed = y_true.argmax(-1).reshape(-1)
         y_pred_processed, _ = self.assignment_solver(y_pred.clone().cpu().detach().numpy())
-        y_pred_processed = torch.from_numpy(y_pred_processed).reshape(-1)
+        y_pred_processed = torch.from_numpy(y_pred_processed).reshape(-1).to(self.device)
         return (y_pred_processed == y_true_processed).sum() / len(y_pred_processed)

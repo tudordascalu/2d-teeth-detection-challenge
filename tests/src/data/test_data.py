@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch
 
-from src.data.data import PanoramicDataset
+from src.data.panoramic_dataset import PanoramicDataset
 
 
 class TestPanoramicDataset(unittest.TestCase):

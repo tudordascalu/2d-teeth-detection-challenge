@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from pytorch_lightning import loggers
 from torchvision.transforms import Compose
 
-from src.data.data import MultiObjectDataset
+from src.data.multi_object_dataset import MultiObjectDataset
 from src.model.multi_object_labeling_cnn.multi_object_labeling_cnn import MultiObjectLabelingCNN
 from src.utils.transforms import RandomObjectRemover, RandomObjectSwapper, RandomObjectShifter
 
@@ -33,13 +33,11 @@ if __name__ == "__main__":
     dataset_args = dict(inter_object_distance_mat_mean=inter_object_distance_mat_mean,
                         inter_object_distance_mat_std=inter_object_distance_mat_std)
     dataset_train = MultiObjectDataset(dataset=y_train, transforms=transforms, **dataset_args)
-    dataset_val = MultiObjectDataset(dataset=y_val, transforms=transforms, **dataset_args)
-    dataset_test = MultiObjectDataset(dataset=y_test, transforms=transforms, **dataset_args)
+    dataset_val = torch.load("data/final/multi_object_dataset_val.pt")
     # Define dataloaders
     loader_args = dict(batch_size=config["batch_size"], num_workers=0, pin_memory=True)
     loader_train = DataLoader(dataset_train, shuffle=True, **loader_args)
     loader_val = DataLoader(dataset_val, **loader_args)
-    loader_test = DataLoader(dataset_test, **loader_args)
 
     # Define model
     model = MultiObjectLabelingCNN(config)
@@ -56,6 +54,6 @@ if __name__ == "__main__":
     if device.type == "cpu":
         trainer = Trainer(**trainer_args)
     else:
-        trainer = Trainer(accelerator="gpu", strategy="ddp", devices=2, **trainer_args)
+        trainer = Trainer(accelerator="gpu", strategy="ddp", devices=1, **trainer_args)
 
     trainer.fit(model=model, train_dataloaders=loader_train, val_dataloaders=loader_val)
