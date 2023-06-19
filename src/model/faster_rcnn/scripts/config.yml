@@ -9,3 +9,13 @@ max_epochs: 200
 batch_size: 16
 learning_rate: 1e-3
 n_teeth: 32
+p_flip: .5
+p_brightness_contrast: .5
+p_rigid_body: .5
+shift_limit: 0.05
+rotate_limit: 10
+num_holes: 5
+max_h_size: 80
+max_w_size: 80
+fill_value: 128
+p_cutout: .5
