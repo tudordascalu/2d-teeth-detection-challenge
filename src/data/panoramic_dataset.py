@@ -31,7 +31,7 @@ class PanoramicDataset(Dataset):
             boxes = torch.tensor(transformed["bboxes"], dtype=torch.float32)
             labels = torch.tensor(transformed["class_labels"], dtype=torch.int64)
 
-        # Select only one dimension from image as it is greyscale
+        # Normalize image
         image = image[0].unsqueeze(0) / 255
 
         return {"image": image, "targets": dict(boxes=boxes, labels=labels), "id": sample['file_name'].split(".")[0]}
