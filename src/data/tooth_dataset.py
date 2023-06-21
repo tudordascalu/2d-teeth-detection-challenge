@@ -24,11 +24,12 @@ class ToothDataset(Dataset):
         label = sample["annotation"]["category_id_3"]
 
         # Crop image and normalize image
+        # TODO: consider add more of the surrounding area for context
         image = image[0, box[1]:box[3], box[0]:box[2]].unsqueeze(0) / 255
 
         # Convert to tensor
         image = torch.tensor(image, dtype=torch.float32)
-        label = torch.tensor(label, dtype=torch.int32)
+        label = torch.tensor(label, dtype=torch.int64)
 
         return dict(image=image, label=label)
 
@@ -55,17 +56,10 @@ class ToothDataset(Dataset):
         images = [pad(img, (0, max_w - img.shape[2], 0, max_h - img.shape[1])) for img in images]
 
         # Convert to tensor
-        images = torch.tensor(images, dtype=torch.float32)
-        labels = torch.tensor(labels, dtype=torch.int32)
+        images = torch.stack(images)
+        labels = torch.stack(labels)
 
         return {"image": images, "label": labels}
 
     def __len__(self):
         return len(self.dataset)
-
-
-if __name__ == "__main__":
-    y = np.load(f"data/final/y_quadrant_enumeration_disease_train.npy", allow_pickle=True)
-    dataset = ToothDataset(y, "data/raw/training_data/quadrant_enumeration_disease/xrays", transform=None)
-    sample = dataset[0]
-    print(sample)
