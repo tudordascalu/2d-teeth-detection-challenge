@@ -9,5 +9,5 @@ n_classes: 4
 # Model
 max_epochs: 200
 batch_size: 16
-learning_rate: 1e-3
+learning_rate: 1e-4
 resnet_version: 50

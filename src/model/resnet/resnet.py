@@ -40,6 +40,11 @@ class ResNet(pl.LightningModule):
         linear_size = list(self.model.children())[-1].in_features
         self.model.fc = Linear(linear_size, config["n_classes"])
 
+        # Freeze the early layers (everything but the final layer)
+        for name, param in self.model.named_parameters():
+            if "layer4" not in name and "fc" not in name:
+                param.requires_grad = False
+
     def forward(self, input):
         # Convert greyscale to "RGB"
         x = self.conv1(input)
@@ -60,7 +65,7 @@ class ResNet(pl.LightningModule):
         images, labels = batch["image"], batch["label"]
         y_pred = self.forward(images)
         loss = self.ce_loss(y_pred, labels)
-        self.log("train_loss", loss, on_step=True, on_epoch=True)
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -69,8 +74,8 @@ class ResNet(pl.LightningModule):
         y_pred_logits = y_pred.softmax(dim=-1)
 
         # Compute and log metrics
-        self.log("val_loss", self.ce_loss(y_pred, labels), on_step=True, on_epoch=True)
-        self.log('val_acc', self.val_acc(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("val_loss", self.ce_loss(y_pred, labels), on_step=True, on_epoch=True, prog_bar=True)
+        self.log('val_acc', self.val_acc(y_pred_logits, labels), on_step=False, on_epoch=True, prog_bar=True)
         self.log('val_precision', self.val_precision(y_pred_logits, labels), on_step=False, on_epoch=True)
         self.log('val_recall', self.val_recall(y_pred_logits, labels), on_step=False, on_epoch=True)
         self.log('val_f1', self.val_f1(y_pred_logits, labels), on_step=False, on_epoch=True)
