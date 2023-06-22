@@ -1,7 +1,6 @@
 import os
 import pickle
 
-import numpy as np
 import torch
 import torchvision
 import pytorch_lightning as pl
@@ -29,26 +28,29 @@ class FasterRCNN(pl.LightningModule):
         images, targets = batch["image"], batch["targets"]
         loss_dict = self.forward(images, targets)
         loss = sum(loss for loss in loss_dict.values())
-        self.log('train_loss', loss, on_step=True, on_epoch=True)
+        self.log('loss/train', loss, on_step=True, on_epoch=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         images, targets = batch["image"], batch["targets"]
+
         # Set model in training mode to get access to losses
         self.model.train()
         loss_dict = self.forward(images, targets)
         loss = sum(loss for loss in loss_dict.values())
+
         # Set model in eval mode to obtain predictions
         self.model.eval()
         predictions = self.model(images)
         self.map_metric.update(predictions, targets)
-        self.log("val_loss", loss, on_step=True, on_epoch=True)
+        self.log("loss/val", loss, on_step=True, on_epoch=True)
 
     def on_validation_epoch_end(self):
         map_dict = self.map_metric.compute()
-        self.log("val_ap", map_dict["map"], on_epoch=True, sync_dist=True)
-        self.log("val_ap_50", map_dict["map_50"], on_epoch=True, sync_dist=True)
-        self.log("val_ap_75", map_dict["map_75"], on_epoch=True, sync_dist=True)
+        self.log("ap/val", map_dict["map"], on_epoch=True, sync_dist=True)
+        self.log("ap_50/val", map_dict["map_50"], on_epoch=True, sync_dist=True)
+        self.log("ap_75/val", map_dict["map_75"], on_epoch=True, sync_dist=True)
+        self.log("mar_100/val", map_dict["mar_100"], on_epoch=True, sync_dist=True)
         self.map_metric.reset()
 
     def test_step(self, batch, batch_idx):
@@ -58,9 +60,10 @@ class FasterRCNN(pl.LightningModule):
 
     def on_test_epoch_end(self):
         map_dict = self.map_metric.compute()
-        self.log("test_ap", map_dict["map"], on_epoch=True)
-        self.log("test_ap_50", map_dict["map_50"], on_epoch=True)
-        self.log("test_ap_75", map_dict["map_75"], on_epoch=True)
+        self.log("ap/test", map_dict["map"], on_epoch=True)
+        self.log("ap_50/test", map_dict["map_50"], on_epoch=True)
+        self.log("ap_75/test", map_dict["map_75"], on_epoch=True)
+        self.log("mar_100/test", map_dict["mar_100"], on_epoch=True, sync_dist=True)
         self.map_metric.reset()
 
     def on_predict_start(self):

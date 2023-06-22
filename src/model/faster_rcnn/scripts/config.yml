@@ -2,7 +2,7 @@
 image_dir: data/raw/training_data
 output_path: output/
 checkpoints_path: checkpoints/faster_rcnn/
-data_type: quadrant_enumeration # quadrant | quadrant_enumeration | quadrant_enumeration_disease
+data_type: quadrant_enumeration
 
 # Model
 max_epochs: 200
@@ -15,8 +15,9 @@ p_flip: 0
 p_brightness_contrast: .5
 p_rigid_body: .5
 shift_limit: 0.05
-rotate_limit: 10
-num_holes: 5
+scale_limit: 0.05
+rotate_limit: 5
+num_holes: 2
 max_h_size: 80
 max_w_size: 80
 fill_value: 128

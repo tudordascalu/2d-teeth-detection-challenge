@@ -28,7 +28,8 @@ if __name__ == "__main__":
         A.RandomBrightnessContrast(p=config["p_brightness_contrast"]),
         A.ShiftScaleRotate(p=config["p_rigid_body"],
                            shift_limit=config["shift_limit"],
-                           rotate_limit=config["rotate_limit"]),
+                           rotate_limit=config["rotate_limit"],
+                           scale_limit=config["scale_limit"]),
         A.Cutout(num_holes=config["num_holes"],
                  max_h_size=config["max_h_size"],
                  max_w_size=config["max_w_size"],
@@ -59,6 +60,7 @@ if __name__ == "__main__":
                         logger=logger,
                         log_every_n_steps=5)
 
+    # Train model
     if device.type == "cpu":
         trainer = Trainer(**trainer_args)
     else:

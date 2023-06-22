@@ -35,3 +35,16 @@ in-paint teeth.
 - use data for tuning model
 
 ## Augmentation: affine transformations during training
+
+
+# Results
+
+- checkpoints/faster_rcnn/version_3/
+┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃        Test metric        ┃       DataLoader 0        ┃
+┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│          ap/test          │    0.49480682611465454    │
+│        ap_50/test         │    0.8968981504440308     │
+│        ap_75/test         │    0.4815780222415924     │
+│       mar_100/test        │    0.6076436638832092     │
+└───────────────────────────┴───────────────────────────┘
