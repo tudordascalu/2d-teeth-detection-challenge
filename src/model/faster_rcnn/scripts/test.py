@@ -10,7 +10,7 @@ from src.model.faster_rcnn.faster_rcnn import FasterRCNN
 if __name__ == "__main__":
     with open("./src/model/faster_rcnn/scripts/config.yml", "r") as f:
         config = yaml.safe_load(f)
-    checkpoint = dict(version="version_7", model="epoch=epoch=192-val_loss=val_loss=0.84.ckpt")
+    checkpoint = dict(version="version_3", model="epoch=epoch=88-val_loss=val_loss=0.81.ckpt")
     # Find out whether gpu is available
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     # Load test split

@@ -52,20 +52,31 @@ class ResNet(pl.LightningModule):
         # Apply Resnet
         x = self.model(x)
 
-        # Apply softmax
-        # cls = softmax(x, dim=-1)
-
         return x
 
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), lr=float(self.config["learning_rate"]), momentum=0.9)
-        return optimizer
+        optimizer = torch.optim.RMSprop(self.parameters(), lr=self.config["learning_rate"])
+
+        # Reduce learning rate when a metric has stopped improving.
+        # "val_loss" is the logged validation loss from `validation_step`
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", patience=5, factor=0.1,
+                                                               verbose=True)
+        return {
+            "optimizer": optimizer,
+            "lr_scheduler": {
+                "scheduler": scheduler,
+                "monitor": "val_loss",  # Name of the logged metric to monitor.
+                "interval": "epoch",  # scheduler.step() is called after each epoch
+                "frequency": 1,  # scheduler.step() is called once every "frequency" times.
+                "strict": True,
+            }
+        }
 
     def training_step(self, batch, batch_idx):
         images, labels = batch["image"], batch["label"]
         y_pred = self.forward(images)
         loss = self.ce_loss(y_pred, labels)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("loss/train", loss, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -74,11 +85,11 @@ class ResNet(pl.LightningModule):
         y_pred_logits = y_pred.softmax(dim=-1)
 
         # Compute and log metrics
-        self.log("val_loss", self.ce_loss(y_pred, labels), on_step=True, on_epoch=True, prog_bar=True)
-        self.log('val_acc', self.val_acc(y_pred_logits, labels), on_step=False, on_epoch=True, prog_bar=True)
-        self.log('val_precision', self.val_precision(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log('val_recall', self.val_recall(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log('val_f1', self.val_f1(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("loss/val", self.ce_loss(y_pred, labels), on_step=True, on_epoch=True, prog_bar=True)
+        self.log("acc/val", self.val_acc(y_pred_logits, labels), on_step=False, on_epoch=True, prog_bar=True)
+        self.log("precision/val", self.val_precision(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("recall/val", self.val_recall(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("f1/val", self.val_f1(y_pred_logits, labels), on_step=False, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         images, labels = batch["image"], batch["label"]
@@ -86,8 +97,8 @@ class ResNet(pl.LightningModule):
         y_pred_logits = y_pred.softmax(dim=-1)
 
         # Compute and log metrics
-        self.log("test_loss", self.ce_loss(y_pred, labels), on_step=True, on_epoch=True)
-        self.log('test_acc', self.test_acc(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log('test_precision', self.test_precision(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log('test_recall', self.test_recall(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log('test_f1', self.test_f1(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("loss/test", self.ce_loss(y_pred, labels), on_step=True, on_epoch=True)
+        self.log("acc/test", self.test_acc(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("precision/test", self.test_precision(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("recall/test", self.test_recall(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("f1/test", self.test_f1(y_pred_logits, labels), on_step=False, on_epoch=True)

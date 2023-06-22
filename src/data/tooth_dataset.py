@@ -9,7 +9,7 @@ from src.utils.label_encoder import LabelEncoder
 
 class ToothDataset(Dataset):
     def __init__(self, dataset, image_dir, transform=None):
-        self.dataset = self._unpack_dataset(dataset)
+        self.dataset = dataset
         self.image_dir = image_dir
         self.encoder = LabelEncoder()
         self.transform = transform
@@ -32,15 +32,6 @@ class ToothDataset(Dataset):
         label = torch.tensor(label, dtype=torch.int64)
 
         return dict(image=image, label=label)
-
-    @staticmethod
-    def _unpack_dataset(x):
-        """
-        Ensure that each box is its own item.
-        :return: list of dictionaries with keys "file_name" and "annotation"
-        """
-        return [dict(file_name=sample["file_name"], annotation=annotation) for sample in x for annotation in
-                sample["annotations"]]
 
     @staticmethod
     def collate_fn(batch):
