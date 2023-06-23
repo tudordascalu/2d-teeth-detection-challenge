@@ -55,7 +55,7 @@ class ResNet(pl.LightningModule):
         return x
 
     def configure_optimizers(self):
-        optimizer = torch.optim.RMSprop(self.parameters(), lr=self.config["learning_rate"])
+        optimizer = torch.optim.RMSprop(self.parameters(), lr=float(self.config["learning_rate"]))
 
         # Reduce learning rate when a metric has stopped improving.
         # "val_loss" is the logged validation loss from `validation_step`
@@ -65,7 +65,7 @@ class ResNet(pl.LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "val_loss",  # Name of the logged metric to monitor.
+                "monitor": "loss/val_epoch",  # Name of the logged metric to monitor.
                 "interval": "epoch",  # scheduler.step() is called after each epoch
                 "frequency": 1,  # scheduler.step() is called once every "frequency" times.
                 "strict": True,
