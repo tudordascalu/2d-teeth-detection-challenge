@@ -36,14 +36,14 @@ class VisionTransformer(pl.LightningModule):
             32: models.vit_b_32
         }
         self.model = vit_types[config["vit_version"]](weights=ViT_B_16_Weights.IMAGENET1K_V1)
-        self.model.head = torch.nn.Linear(self.model.head.in_features, config["n_classes"])
-
-        # Freeze the early layers
-        for name, param in self.model.named_parameters():
-            if "head" not in name:
-                param.requires_grad = False
+        self.model.heads.head = torch.nn.Linear(self.model.hidden_dim, config["n_classes"])
+        self.conv1 = torch.nn.Conv2d(in_channels=1, out_channels=3, kernel_size=3, padding=1, bias=False)
 
     def forward(self, x):
+        # Convert to "RGB"
+        x = self.conv1(x)
+
+        # Apply vision transformer
         x = self.model(x)
         return x
 

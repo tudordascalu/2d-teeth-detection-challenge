@@ -5,13 +5,13 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from pytorch_lightning import loggers
+from torchvision.transforms import Compose, Resize, InterpolationMode, CenterCrop
 
 from src.data.tooth_dataset import ToothDataset
-from src.model.resnet.resnet import ResNet
 from src.model.vision_transformer.vision_transformer import VisionTransformer
 
 if __name__ == "__main__":
-    with open("./src/model/resnet/scripts/config.yml", "r") as f:
+    with open("./src/model/vision_transformer/scripts/config.yml", "r") as f:
         config = yaml.safe_load(f)
 
     # Find out whether gpu is available
@@ -23,7 +23,12 @@ if __name__ == "__main__":
         np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_val.npy", allow_pickle=True), \
         np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_test.npy", allow_pickle=True)
 
-    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays")
+    transform = Compose([
+        Resize(256, interpolation=InterpolationMode.BILINEAR),  # Resize to 256 on the smaller edge
+        CenterCrop(224),  # Perform a center crop of 224x224
+    ])
+
+    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays", transform=transform)
     dataset_train = ToothDataset(y_train, **dataset_args)
     dataset_val = ToothDataset(y_val, **dataset_args)
     dataset_test = ToothDataset(y_test, **dataset_args)

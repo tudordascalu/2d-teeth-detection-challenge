@@ -24,8 +24,9 @@ class ToothDataset(Dataset):
         label = sample["annotation"]["category_id_3"]
 
         # Crop image and normalize image
-        # TODO: consider add more of the surrounding area for context
         image = image[0, box[1]:box[3], box[0]:box[2]].unsqueeze(0) / 255
+
+        image = self.transform(image)
 
         # Convert to tensor
         image = torch.tensor(image, dtype=torch.float32)
