@@ -3,6 +3,7 @@ import torchmetrics
 from torch.nn import CrossEntropyLoss, Conv2d, Linear
 from torchvision import models
 import pytorch_lightning as pl
+from torchvision.models import ResNet50_Weights
 
 
 class ResNet(pl.LightningModule):
@@ -35,14 +36,15 @@ class ResNet(pl.LightningModule):
             50: models.resnet50, 101: models.resnet101,
             152: models.resnet152
         }
-        self.model = resnet_types[config["resnet_version"]](pretrained=True)
+        self.model = resnet_types[config["resnet_version"]](weights=ResNet50_Weights.DEFAULT)
         self.conv1 = Conv2d(in_channels=1, out_channels=3, kernel_size=3, padding=1, bias=False)
         linear_size = list(self.model.children())[-1].in_features
         self.model.fc = Linear(linear_size, config["n_classes"])
 
         # Freeze the early layers (everything but the final layer)
         for name, param in self.model.named_parameters():
-            if "layer4" not in name and "fc" not in name:
+            # if "layer4" not in name and "fc" not in name:
+            if "fc" not in name:
                 param.requires_grad = False
 
     def forward(self, input):
@@ -65,7 +67,7 @@ class ResNet(pl.LightningModule):
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "loss/val_epoch",  # Name of the logged metric to monitor.
+                "monitor": "loss/val",  # Name of the logged metric to monitor.
                 "interval": "epoch",  # scheduler.step() is called after each epoch
                 "frequency": 1,  # scheduler.step() is called once every "frequency" times.
                 "strict": True,

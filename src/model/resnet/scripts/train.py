@@ -45,10 +45,10 @@ if __name__ == "__main__":
     model = ResNet(config)
     logger = loggers.TensorBoardLogger(save_dir=config["checkpoints_path"], name=None)
     trainer_args = dict(max_epochs=config["max_epochs"],
-                        callbacks=[ModelCheckpoint(save_top_k=1,
+                        callbacks=[ModelCheckpoint(save_top_k=3,
                                                    monitor="loss/val",
                                                    mode="min",
-                                                   filename="epoch={epoch:02d}-val_loss={val_loss:.2f}")],
+                                                   filename="epoch={epoch:02d}-val_loss={loss/val:.2f}")],
                         logger=logger)
 
     # Train model

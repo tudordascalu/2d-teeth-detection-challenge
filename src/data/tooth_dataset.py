@@ -26,7 +26,8 @@ class ToothDataset(Dataset):
         # Crop image and normalize image
         image = image[0, box[1]:box[3], box[0]:box[2]].unsqueeze(0) / 255
 
-        image = self.transform(image)
+        if self.transform is not None:
+            image = self.transform(image)
 
         # Convert to tensor
         image = torch.tensor(image, dtype=torch.float32)
