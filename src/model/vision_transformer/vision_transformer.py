@@ -21,28 +21,22 @@ class VisionTransformer(pl.LightningModule):
 
         # Utils
         self.ce_loss = CrossEntropyLoss()
-        self.val_acc = torchmetrics.Accuracy("multiclass", num_classes=config["n_classes"])
-        self.val_precision = torchmetrics.Precision("multiclass", average="macro", num_classes=config["n_classes"])
-        self.val_recall = torchmetrics.Recall("multiclass", average="macro", num_classes=config["n_classes"])
-        self.val_f1 = torchmetrics.F1Score("multiclass", average="macro", num_classes=config["n_classes"])
-        self.test_acc = torchmetrics.Accuracy("multiclass", num_classes=config["n_classes"])
-        self.test_precision = torchmetrics.Precision("multiclass", average="macro", num_classes=config["n_classes"])
-        self.test_recall = torchmetrics.Recall("multiclass", average="macro", num_classes=config["n_classes"])
-        self.test_f1 = torchmetrics.F1Score("multiclass", average="macro", num_classes=config["n_classes"])
+        self.val_f1 = torchmetrics.F1Score("multiclass", average="macro", num_classes=config["n_classes"],
+                                           ignore_index=4)
+        self.val_f1_per_class = torchmetrics.F1Score("multiclass", average=None, num_classes=config["n_classes"])
+        self.test_f1 = torchmetrics.F1Score("multiclass", average="macro", num_classes=config["n_classes"],
+                                            ignore_index=4)
+        self.test_f1_per_class = torchmetrics.F1Score("multiclass", average=None, num_classes=config["n_classes"])
 
         # Model
         vit_types = {
             16: models.vit_b_16,
             32: models.vit_b_32
         }
-        self.model = vit_types[config["vit_version"]](weights=ViT_B_16_Weights.IMAGENET1K_V1)
+        self.model = vit_types[config["vit_version"]](weights=ViT_B_16_Weights.DEFAULT)
         self.model.heads.head = torch.nn.Linear(self.model.hidden_dim, config["n_classes"])
-        self.conv1 = torch.nn.Conv2d(in_channels=1, out_channels=3, kernel_size=3, padding=1, bias=False)
 
     def forward(self, x):
-        # Convert to "RGB"
-        x = self.conv1(x)
-
         # Apply vision transformer
         x = self.model(x)
         return x
@@ -52,13 +46,13 @@ class VisionTransformer(pl.LightningModule):
 
         # Reduce learning rate when a metric has stopped improving.
         # "val_loss" is the logged validation loss from `validation_step`
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="min", patience=5, factor=0.1,
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode="max", patience=5, factor=0.1,
                                                                verbose=True)
         return {
             "optimizer": optimizer,
             "lr_scheduler": {
                 "scheduler": scheduler,
-                "monitor": "loss/val_epoch",  # Name of the logged metric to monitor.
+                "monitor": "val_f1",  # Name of the logged metric to monitor.
                 "interval": "epoch",  # scheduler.step() is called after each epoch
                 "frequency": 1,  # scheduler.step() is called once every "frequency" times.
                 "strict": True,
@@ -77,21 +71,31 @@ class VisionTransformer(pl.LightningModule):
         y_pred = self.forward(images)
         y_pred_logits = y_pred.softmax(dim=-1)
 
-        # Compute and log metrics
+        # Metrics
+        self.val_f1_per_class.update(y_pred_logits, labels)
         self.log("loss/val", self.ce_loss(y_pred, labels), on_step=True, on_epoch=True, prog_bar=True)
-        self.log("acc/val", self.val_acc(y_pred_logits, labels), on_step=False, on_epoch=True, prog_bar=True)
-        self.log("precision/val", self.val_precision(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log("recall/val", self.val_recall(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log("f1/val", self.val_f1(y_pred_logits, labels), on_step=False, on_epoch=True)
+        self.log("val_f1", self.val_f1(y_pred_logits, labels), on_step=False, on_epoch=True)
+
+    def on_validation_epoch_end(self):
+        f1_per_class = self.val_f1_per_class.compute()
+        self.val_f1_per_class.reset()
+
+        # Log the per-class F1 scores
+        for i, f1 in enumerate(f1_per_class):
+            self.log(f'f1_class_{i}/val', f1)
 
     def test_step(self, batch, batch_idx):
         images, labels = batch["image"], batch["label"]
         y_pred = self.forward(images)
         y_pred_logits = y_pred.softmax(dim=-1)
 
-        # Compute and log metrics
-        self.log("loss/test", self.ce_loss(y_pred, labels), on_step=True, on_epoch=True)
-        self.log("acc/test", self.test_acc(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log("precision/test", self.test_precision(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log("recall/test", self.test_recall(y_pred_logits, labels), on_step=False, on_epoch=True)
-        self.log("f1/test", self.test_f1(y_pred_logits, labels), on_step=False, on_epoch=True)
+        # Metrics
+        self.test_f1.update(y_pred_logits, labels)
+
+    def on_test_epoch_end(self):
+        f1_per_class = self.test_f1.compute()
+        self.test_f1.reset()
+
+        # Log the per-class F1 scores
+        for i, f1 in enumerate(f1_per_class):
+            self.log(f'f1_class_{i}', f1)

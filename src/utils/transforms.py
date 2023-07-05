@@ -11,6 +11,22 @@ class PadToSize:
         return F.pad(img_tensor, padding, padding_mode='constant', fill=0)
 
 
+class SquarePad:
+    def __init__(self):
+        pass
+
+    def __call__(self, image):
+        s = image.size()
+        w, h = s[-1], s[-2]
+        max_wh = np.max([s[-1], s[-2]])
+        hp_1 = int((max_wh - w) / 2)
+        hp_2 = int((max_wh - w) / 2) + int((max_wh - w) % 2)
+        vp_1 = int((max_wh - h) / 2)
+        vp_2 = int((max_wh - h) / 2) + int((max_wh - h) % 2)
+        padding = (hp_1, vp_1, hp_2, vp_2)
+        return F.pad(image, padding, 0, 'constant')
+
+
 class RandomObjectRemover:
     def __init__(self, p=0.5, max=5):
         """

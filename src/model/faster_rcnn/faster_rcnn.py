@@ -44,6 +44,7 @@ class FasterRCNN(pl.LightningModule):
         predictions = self.model(images)
         self.map_metric.update(predictions, targets)
         self.log("loss/val", loss, on_step=True, on_epoch=True)
+        self.log("val_loss", loss, on_step=True, on_epoch=True)
 
     def on_validation_epoch_end(self):
         map_dict = self.map_metric.compute()

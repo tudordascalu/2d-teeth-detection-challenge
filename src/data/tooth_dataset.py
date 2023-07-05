@@ -24,7 +24,7 @@ class ToothDataset(Dataset):
         label = sample["annotation"]["category_id_3"]
 
         # Crop image and normalize image
-        image = image[0, box[1]:box[3], box[0]:box[2]].unsqueeze(0) / 255
+        image = image[:, box[1]:box[3], box[0]:box[2]] / 255
 
         if self.transform is not None:
             image = self.transform(image)

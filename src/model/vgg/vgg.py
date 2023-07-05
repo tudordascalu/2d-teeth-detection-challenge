@@ -40,18 +40,27 @@ class Vgg(pl.LightningModule):
                                             ignore_index=4)
 
         # Model
-        vgg_types = {
-            16: models.vgg16, 19: models.vgg19,
-        }
+        vgg_types = {16: models.vgg16, 19: models.vgg19}
         self.model = vgg_types[config["vgg_version"]](weights=VGG16_Weights.DEFAULT)
-        # self.conv1 = Conv2d(in_channels=1, out_channels=3, kernel_size=3, padding=1, bias=False)
         in_features = self.model.classifier[6].in_features
         self.model.classifier[6] = Linear(in_features, config["n_classes"])
 
-        # Freeze the feature extracting layers
-        for name, param in self.model.named_parameters():
-            if "classifier" not in name:
-                param.requires_grad = False
+        # # Freeze the feature extracting layers
+        # for name, param in self.model.named_parameters():
+        #     if "classifier" not in name:
+        #         param.requires_grad = False
+
+        # Freeze all layers
+        for param in self.model.parameters():
+            param.requires_grad = False
+
+        # Unfreeze the last convolutional block (block5)
+        for param in self.model.features[24:].parameters():
+            param.requires_grad = True
+
+        # Unfreeze the fully connected layers
+        for param in self.model.classifier.parameters():
+            param.requires_grad = True
 
     def forward(self, input):
         # Convert greyscale to "RGB"
