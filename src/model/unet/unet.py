@@ -6,6 +6,8 @@ from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch import sigmoid, softmax
 
+from src.utils.dice_score import DiceScore, DiceLoss
+
 
 class DoubleConv(nn.Module):
     """(convolution => [BN] => ReLU) * 2"""
@@ -82,6 +84,10 @@ class UNet(LightningModule):
         # Hyperparameters
         self.config = config
 
+        # Utilities
+        self.dice_score = DiceScore()
+        self.dice_loss = DiceLoss()
+
         # Model
         self.inc = DoubleConv(1, 64)
         self.down1 = Down(64, 128)
@@ -110,10 +116,6 @@ class UNet(LightningModule):
 
         # Last activation
         x = self.outc(x)
-        if self.config["n_classes"] == 1:
-            x = sigmoid(x)
-        else:
-            x = softmax(x, dim=1)
         return x
 
     def configure_optimizers(self):
@@ -130,38 +132,25 @@ class UNet(LightningModule):
                 }}
 
     def training_step(self, batch, batch_idx):
-        x, y = batch
-        y_pred = self.forward(x)
-        loss = self._loss(y_pred, y)
-        accuracy = self._accuracy(y_pred, y)
-        self.log("train_loss", loss)
-        return {"loss": loss, "train_loss": loss, "train_accuracy": accuracy}
+        input, mask, label = batch["image"], batch["mask"], batch["label"]
+        prediction = self.forward(input)
 
-    def training_epoch_end(self, outputs):
-        avg_loss = torch.stack([x["train_loss"] for x in outputs]).mean()
-        avg_accuracy = torch.stack([x["train_accuracy"] for x in outputs]).mean()
-        self.log("step", self.trainer.current_epoch)
-        self.log("avg_loss", {"train": avg_loss})
-        self.log("avg_accuracy", {"train": avg_accuracy})
+        # Log metrics
+        loss = self.dice_loss(prediction, mask)
+        self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("train_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_step=True, on_epoch=True)
+        return loss
 
     def validation_step(self, val_batch, batch_idx):
-        x, y = val_batch
-        y_pred = self.forward(x)
-        loss = self._loss(y_pred, y)
-        accuracy = self._accuracy(y_pred, y)
-        self.log("val_loss", loss, prog_bar=True)
-        return {"val_loss": loss, "val_accuracy": accuracy}
+        input, mask, label = val_batch["image"], val_batch["mask"], val_batch["label"]
+        prediction = self.forward(input)
 
-    def validation_epoch_end(self, outputs):
-        avg_loss = torch.stack([x["val_loss"] for x in outputs]).mean()
-        avg_accuracy = torch.stack([x["val_accuracy"] for x in outputs]).mean()
-        self.log("step", self.trainer.current_epoch)
-        self.log("avg_loss", {"val": avg_loss})
-        self.log("avg_accuracy", {"val": avg_accuracy})
+        # Log metrics
+        self.log("val_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_step=True, on_epoch=True)
 
     def test_step(self, test_batch, batch_idx):
-        x, y = test_batch
-        y_pred = self.forward(x)
-        loss = self._loss(y_pred, y)
-        accuracy = self._accuracy(y_pred, y)
-        return {"test_loss": loss, "test_accuracy": accuracy}
+        input, mask, label = test_batch["image"], test_batch["mask"], test_batch["label"]
+        prediction = self.forward(input)
+
+        # Log metrics
+        self.log("test_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_epoch=True)
