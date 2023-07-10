@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import Dataset
 from torchvision.io import read_image
 import nibabel as nib
+import torch.nn.functional as F
 
 
 class ToothSegmentationDataset(Dataset):
@@ -32,8 +33,13 @@ class ToothSegmentationDataset(Dataset):
                 f"{self.data_dir}/final/masks/{disease}_{tooth}_{quadrant}_{image_name.split('.')[0]}_Segmentation.nii").get_fdata()
         except:
             # Create empty mask if it does not exist
-            mask = np.zeros((image.shape[2], image.shape[1]))
-        mask = torch.from_numpy(mask).permute(2, 1, 0).type(torch.float32)
+            mask = np.zeros((image.shape[2], image.shape[1], 1))
+
+        # Perform one hot encoding
+        mask = F.one_hot(
+            torch.from_numpy(mask).permute(2, 1, 0).squeeze().to(torch.int64),
+            num_classes=3
+        ).permute(2, 0, 1).to(torch.float32)
 
         # Apply transforms
         if self.transform_input is not None:

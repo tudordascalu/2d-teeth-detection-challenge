@@ -98,7 +98,7 @@ class UNet(LightningModule):
         self.up2 = Up(512, 256 // 2)
         self.up3 = Up(256, 128 // 2)
         self.up4 = Up(128, 64)
-        self.outc = OutConv(64, self.config["n_classes"])
+        self.outc = OutConv(64, 3)
 
     def forward(self, x):
         # Encoder

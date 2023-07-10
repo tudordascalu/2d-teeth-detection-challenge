@@ -14,7 +14,8 @@ class TestToothSegmentationDataset(unittest.TestCase):
             allow_pickle=True)
 
     def test_len(self):
-        self.assertEqual(len(self.dataset), len(self.X))
+        dataset = ToothSegmentationDataset(dataset=self.X, data_dir="../../../data")
+        self.assertEqual(len(dataset), len(self.X))
 
     def test_get_item_without_mask(self):
         # Load data
@@ -25,9 +26,9 @@ class TestToothSegmentationDataset(unittest.TestCase):
         # Checks
         self.assertEqual(label, 4)
         self.assertTrue(image.min() >= 0 and image.max() <= 1)
-        self.assertEquals(mask.unique().tolist(), [0])
+        self.assertEquals(mask.unique().tolist(), [0, 1])
         self.assertEqual(image.shape, (3, 331, 85))
-        self.assertEqual(mask.shape, (1, 331, 85))
+        self.assertEqual(mask.shape, (3, 331, 85))
 
     def test_get_item_with_mask(self):
         # Load data
@@ -40,7 +41,7 @@ class TestToothSegmentationDataset(unittest.TestCase):
         self.assertTrue(image.min() >= 0 and image.max() <= 1)
         self.assertEquals(mask.unique().tolist(), [0, 1])
         self.assertEqual(image.shape, (3, 276, 253))
-        self.assertEqual(mask.shape, (1, 276, 253))
+        self.assertEqual(mask.shape, (3, 276, 253))
         self.assertEquals(mask.unique().tolist(), [0, 1])
 
     def test_get_item_cropping(self):
@@ -65,7 +66,7 @@ class TestToothSegmentationDataset(unittest.TestCase):
         self.assertTrue(image.min() >= 0 and image.max() <= 1)
         self.assertEquals(mask.unique().tolist(), [0, 1])
         self.assertEqual(image.shape, (3, 224, 224))
-        self.assertEqual(mask.shape, (1, 224, 224))
+        self.assertEqual(mask.shape, (3, 224, 224))
         self.assertEquals(mask.unique().tolist(), [0, 1])
 
 
