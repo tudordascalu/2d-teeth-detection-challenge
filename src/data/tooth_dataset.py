@@ -33,7 +33,7 @@ class ToothDataset(Dataset):
         image = torch.tensor(image, dtype=torch.float32)
         label = torch.tensor(label, dtype=torch.int64)
 
-        return dict(image=image, label=label)
+        return dict(image=image, label=label, file_name=sample["file_name"])
 
     @staticmethod
     def collate_fn(batch):

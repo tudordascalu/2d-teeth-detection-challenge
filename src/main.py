@@ -30,16 +30,12 @@ class PanoramicProcessor:
         self.faster_rcnn.eval()
         self.vgg = Vgg.load_from_checkpoint(
             f"checkpoints/vgg/version_10/checkpoints/epoch=epoch=31-val_loss=val_f1=0.38.ckpt")
-        # self.resnet = ResNet.load_from_checkpoint(
-        #     f"checkpoints/resnet/version_28/checkpoints/epoch=epoch=31-val_loss=val_f1=0.51.ckpt")
-        # self.vit = VisionTransformer.load_from_checkpoint(
-        #     f"checkpoints/vision_transformer/version_2/checkpoints/epoch=epoch=03-val_loss=val_loss=0.00.ckpt")
-
+        self.vgg.eval()
         # Utilities
         self.encoder = LabelEncoder()
         self.transform = transforms.Compose([
             SquarePad(),
-            transforms.Resize(224, interpolation=InterpolationMode.BILINEAR)  # Resize to 256 on the smaller edge
+            transforms.Resize(224, interpolation=InterpolationMode.BILINEAR)
         ])
         self.unique_class_nms_processor = UniqueClassNMSProcessor(iou_threshold=.75)
 

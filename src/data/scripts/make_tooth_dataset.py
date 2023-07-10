@@ -38,67 +38,62 @@ class FilterOverlappingBoxes:
 
 
 if __name__ == "__main__":
-    if os.path.exists("data/processed/y_quadrant_enumeration_disease_with_healthy_samples.npy"):
-        # Load from cache
-        y_processed = np.load("data/processed/y_quadrant_enumeration_disease_with_healthy_samples.npy",
-                              allow_pickle=True)
-    else:
-        # Load data
-        y = np.load("data/processed/y_quadrant_enumeration_disease.npy", allow_pickle=True)
+    # Load data
+    y = np.load("data/processed/y_quadrant_enumeration_disease.npy", allow_pickle=True)
 
-        # Load model
-        checkpoint = dict(version="version_", model="epoch=epoch=192-val_loss=val_loss=0.84.ckpt")
-        model = FasterRCNN.load_from_checkpoint(
-            "checkpoints/faster_rcnn/version_3/checkpoints/epoch=epoch=88-val_loss=val_loss=0.81.ckpt")
-        model.eval()
-        # Initialize helpers
-        unique_class_nms_processor = UniqueClassNMSProcessor(iou_threshold=.75)
-        filter_overlapping_boxes = FilterOverlappingBoxes(iou_threshold=.5)
+    # Load model
+    checkpoint = dict(version="version_", model="epoch=epoch=192-val_loss=val_loss=0.84.ckpt")
+    model = FasterRCNN.load_from_checkpoint(
+        "checkpoints/faster_rcnn/version_3/checkpoints/epoch=epoch=88-val_loss=val_loss=0.81.ckpt")
+    model.eval()
+    # Initialize helpers
+    unique_class_nms_processor = UniqueClassNMSProcessor(iou_threshold=.75)
+    filter_overlapping_boxes = FilterOverlappingBoxes(iou_threshold=.5)
 
-        y_processed = []
+    y_processed = []
 
-        # Make predictions for each sample
-        for sample in tqdm(y, total=len(y)):
-            # Load image
-            image = read_image(f"data/raw/training_data/quadrant_enumeration_disease/xrays/{sample['file_name']}")
-            image = image.type(torch.float32)[0].unsqueeze(0) / 255
+    # Make predictions for each sample
+    for sample in tqdm(y, total=len(y)):
+        # Load image
+        image = read_image(f"data/raw/training_data/quadrant_enumeration_disease/xrays/{sample['file_name']}")
+        image = image.type(torch.float32)[0].unsqueeze(0) / 255
 
-            # Make predictions for healthy teeth
-            with torch.no_grad():
-                predictions = model(image.unsqueeze(0))[0]
-            predictions = unique_class_nms_processor(predictions)
+        # Make predictions for healthy teeth
+        with torch.no_grad():
+            predictions = model(image.unsqueeze(0))[0]
+        predictions = unique_class_nms_processor(predictions)
 
-            # Extract boxes, scores
-            boxes = torch.stack(predictions["boxes"])
-            scores = predictions["scores"]
+        # Extract boxes, scores
+        boxes = torch.stack(predictions["boxes"])
+        scores = predictions["scores"]
 
-            # Get affected tooth boxes with maximum confidence score
-            boxes_affected = torch.tensor([annotation["bbox"] for annotation in sample["annotations"]],
-                                          dtype=torch.float32)
-            labels_affected = torch.tensor([annotation["category_id_3"] for annotation in sample["annotations"]],
-                                           dtype=torch.int64)
+        # Get affected tooth boxes with maximum confidence score
+        boxes_affected = torch.tensor([annotation["bbox"] for annotation in sample["annotations"]],
+                                      dtype=torch.float32)
+        labels_affected = torch.tensor([annotation["category_id_3"] for annotation in sample["annotations"]],
+                                       dtype=torch.int64)
 
-            # Remove overlapping boxes
-            if len(boxes_affected) > 0:
-                indices = filter_overlapping_boxes(boxes, boxes_affected)
-                boxes = boxes[indices]
+        # Remove overlapping boxes
+        if len(boxes_affected) > 0:
+            indices = filter_overlapping_boxes(boxes, boxes_affected)
+            boxes = boxes[indices]
 
-            # Prepare labels for healthy teeth
-            labels = torch.ones(len(boxes), dtype=torch.int64) * 4
+        # Prepare labels for healthy teeth
+        labels = torch.ones(len(boxes), dtype=torch.int64) * 4
 
-            # Concatenate healthy and affected teeth
-            boxes = torch.cat((boxes, boxes_affected))
-            labels = torch.cat((labels, labels_affected))
+        # Concatenate healthy and affected teeth
+        boxes = torch.cat((boxes, boxes_affected))
+        labels = torch.cat((labels, labels_affected))
 
-            # Update annotations to include healthy teeth
-            annotations_processed = [dict(bbox=box, category_id_3=label) for box, label in zip(boxes, labels)]
-            sample["annotations"] = annotations_processed
+        # Update annotations to include healthy teeth
+        annotations_processed = [dict(bbox=box, category_id_3=label) for box, label in zip(boxes, labels)]
+        sample["annotations"] = annotations_processed
 
-            # Accumulate processed samples
-            y_processed.append(sample)
+        # Accumulate processed samples
+        y_processed.append(sample)
 
-        # Save dataset
-        np.save("data/processed/y_quadrant_enumeration_disease_with_healthy_samples.npy", y_processed)
+    # Save dataset
+    np.save("data/processed/y_quadrant_enumeration_disease_with_healthy_samples_2.npy", y_processed)
 
     # Unpack dataset
     y_processed_unpacked = []
@@ -109,4 +104,4 @@ if __name__ == "__main__":
             y_processed_unpacked.append(dict(file_name=sample["file_name"], annotation=annotation))
 
     # Save unpacked dataset
-    np.save("data/processed/y_quadrant_enumeration_disease_with_healthy_samples_unpacked.npy", y_processed_unpacked)
+    np.save("data/processed/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_2.npy", y_processed_unpacked)
