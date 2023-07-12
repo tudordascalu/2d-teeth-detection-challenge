@@ -7,8 +7,9 @@ import torch.nn.functional as F
 
 
 class ToothSegmentationDataset(Dataset):
-    def __init__(self, dataset, data_dir="data", transform_input=None, transform_target=None):
-        self.dataset = dataset
+    def __init__(self, dataset, data_dir="data", transform=None, transform_input=None, transform_target=None):
+        self.dataset = np.array(list(filter(lambda x: x["annotation"]["category_id_3"] != 4, dataset)))
+        self.transform = transform
         self.transform_input = transform_input
         self.transform_target = transform_target
         self.data_dir = data_dir
@@ -23,7 +24,7 @@ class ToothSegmentationDataset(Dataset):
         box = torch.tensor(sample["annotation"]["bbox"], dtype=torch.int32)
 
         # Crop and normalize image
-        image = image[:, box[1]:box[3], box[0]:box[2]] / 255
+        image = image[0, box[1]:box[3], box[0]:box[2]].unsqueeze(0) / 255
 
         # Load mask
         try:
@@ -31,6 +32,10 @@ class ToothSegmentationDataset(Dataset):
             tooth = sample["annotation"]["category_id_2"]
             mask = nib.load(
                 f"{self.data_dir}/final/masks/{disease}_{tooth}_{quadrant}_{image_name.split('.')[0]}_Segmentation.nii").get_fdata()
+
+            # Assign deep caries the last mask
+            if disease == 3:
+                mask *= 2
         except:
             # Create empty mask if it does not exist
             mask = np.zeros((image.shape[2], image.shape[1], 1))
@@ -42,6 +47,10 @@ class ToothSegmentationDataset(Dataset):
         ).permute(2, 0, 1).to(torch.float32)
 
         # Apply transforms
+        if self.transform is not None:
+            image_mask = torch.concat((image, mask), dim=0)
+            image_mask_transformed = self.transform(image_mask)
+            image, mask = image_mask_transformed[:1, ...], image_mask_transformed[1:, ...]
         if self.transform_input is not None:
             image = self.transform_input(image)
         if self.transform_target is not None:
