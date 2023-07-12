@@ -1,10 +1,10 @@
 import torch
 from torch import nn
-import torch.nn.functional as tf
+import torch.nn.functional as F
 from pytorch_lightning import LightningModule
+from torch.nn import CrossEntropyLoss
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torch import sigmoid, softmax
 
 from src.utils.dice_score import DiceScore, DiceLoss
 
@@ -48,18 +48,18 @@ class Up(nn.Module):
 
     def __init__(self, in_channels, out_channels):
         super().__init__()
-        self.up = nn.Upsample(scale_factor=2, mode='trilinear', align_corners=True)
+        self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.conv = DoubleConv(in_channels, out_channels, in_channels // 2)
 
     def forward(self, x1, x2):
         x1 = self.up(x1)
         # input is CDHW
-        diffD = x2.size()[2] - x1.size()[2]
-        diffH = x2.size()[3] - x1.size()[3]
-        diffW = x2.size()[4] - x1.size()[4]
-        x1 = tf.pad(x1, [diffW // 2, diffW - diffW // 2,
-                         diffH // 2, diffH - diffH // 2,
-                         diffD // 2, diffD - diffD // 2])
+        diffD = x2.size()[1] - x1.size()[1]
+        diffH = x2.size()[2] - x1.size()[2]
+        diffW = x2.size()[3] - x1.size()[3]
+        x1 = F.pad(x1, [diffW // 2, diffW - diffW // 2,
+                        diffH // 2, diffH - diffH // 2,
+                        diffD // 2, diffD - diffD // 2])
         # if you have padding issues, see
         # https://github.com/HaiyongJiang/U-Net-Pytorch-Unstructured-Buggy/commit/0e854509c2cea854e247a9c615f175f76fbb2e3a
         # https://github.com/xiaopeng-liao/Pytorch-UNet/commit/8ebac70e633bac59fc22bb5195e513d5832fb3bd
@@ -70,7 +70,7 @@ class Up(nn.Module):
 class OutConv(nn.Module):
     def __init__(self, in_channels, out_channels):
         super(OutConv, self).__init__()
-        self.conv = nn.Conv3d(in_channels, out_channels, kernel_size=1)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size=1)
 
     def forward(self, x):
         return self.conv(x)
@@ -85,8 +85,9 @@ class UNet(LightningModule):
         self.config = config
 
         # Utilities
-        self.dice_score = DiceScore()
+        self.dice_score = DiceScore(ignore_background=True)
         self.dice_loss = DiceLoss()
+        self.cross_entropy = CrossEntropyLoss()
 
         # Model
         self.inc = DoubleConv(1, 64)
@@ -98,7 +99,7 @@ class UNet(LightningModule):
         self.up2 = Up(512, 256 // 2)
         self.up3 = Up(256, 128 // 2)
         self.up4 = Up(128, 64)
-        self.outc = OutConv(64, 3)
+        self.outc = OutConv(64, 1)
 
     def forward(self, x):
         # Encoder
@@ -123,7 +124,9 @@ class UNet(LightningModule):
                             lr=float(self.config["learning_rate"]),
                             weight_decay=1e-8,
                             momentum=0.9)
-        scheduler = ReduceLROnPlateau(optimizer=optimizer, mode="min", patience=self.config["scheduler_patience"],
+        scheduler = ReduceLROnPlateau(optimizer=optimizer,
+                                      mode="max",
+                                      patience=self.config["scheduler_patience"],
                                       verbose=True)
         return {"optimizer": optimizer,
                 "lr_scheduler": {
@@ -136,7 +139,7 @@ class UNet(LightningModule):
         prediction = self.forward(input)
 
         # Log metrics
-        loss = self.dice_loss(prediction, mask)
+        loss = (self.cross_entropy(prediction, torch.argmax(mask, dim=1)) + self.dice_loss(prediction, mask)) / 2
         self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
         self.log("train_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_step=True, on_epoch=True)
         return loss
@@ -146,6 +149,9 @@ class UNet(LightningModule):
         prediction = self.forward(input)
 
         # Log metrics
+        loss = (self.cross_entropy(prediction, torch.argmax(mask, dim=1)) + self.dice_loss(prediction, mask)) / 2
+        self.log("val_loss", loss, prog_bar=True,
+                 on_step=True, on_epoch=True)
         self.log("val_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_step=True, on_epoch=True)
 
     def test_step(self, test_batch, batch_idx):
@@ -153,4 +159,7 @@ class UNet(LightningModule):
         prediction = self.forward(input)
 
         # Log metrics
+        loss = (self.cross_entropy(prediction, torch.argmax(mask, dim=1)) + self.dice_loss(prediction, mask)) / 2
+        self.log("test_loss", loss, prog_bar=True,
+                 on_step=True, on_epoch=True)
         self.log("test_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_epoch=True)

@@ -6,7 +6,7 @@ n_classes: 2
 
 
 # Model
-max_epochs: 200
-batch_size: 32
-learning_rate: 1e-3
-vgg_version: 16
+max_epochs: 1000
+batch_size: 16
+learning_rate: 1e-4
+scheduler_patience: 30
