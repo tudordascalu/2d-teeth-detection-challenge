@@ -1,9 +1,9 @@
 import torch.nn
 import torchmetrics
-from torch.nn import CrossEntropyLoss, Conv2d, Linear
+from torch.nn import CrossEntropyLoss, Linear
 from torchvision import models
 import pytorch_lightning as pl
-from torchvision.models import ResNet50_Weights, VGG16_Weights
+from torchvision.models import VGG16_Weights
 
 
 class Vgg(pl.LightningModule):
@@ -26,8 +26,7 @@ class Vgg(pl.LightningModule):
                                              num_classes=config["n_classes"])
         self.val_f1 = torchmetrics.F1Score("multiclass",
                                            average="macro",
-                                           num_classes=config["n_classes"],
-                                           ignore_index=4)
+                                           num_classes=config["n_classes"])
         self.val_f1_per_class = torchmetrics.F1Score("multiclass",
                                                      average=None,
                                                      num_classes=config["n_classes"])
@@ -36,8 +35,7 @@ class Vgg(pl.LightningModule):
                                                       num_classes=config["n_classes"])
         self.test_f1 = torchmetrics.F1Score("multiclass",
                                             average="macro",
-                                            num_classes=config["n_classes"],
-                                            ignore_index=4)
+                                            num_classes=config["n_classes"])
 
         # Model
         vgg_types = {16: models.vgg16, 19: models.vgg19}
@@ -45,18 +43,13 @@ class Vgg(pl.LightningModule):
         in_features = self.model.classifier[6].in_features
         self.model.classifier[6] = Linear(in_features, config["n_classes"])
 
-        # # Freeze the feature extracting layers
-        # for name, param in self.model.named_parameters():
-        #     if "classifier" not in name:
-        #         param.requires_grad = False
-
         # Freeze all layers
         for param in self.model.parameters():
             param.requires_grad = False
 
-        # Unfreeze the last convolutional block (block5)
-        for param in self.model.features[24:].parameters():
-            param.requires_grad = True
+        # # Unfreeze the last convolutional block (block5)
+        # for param in self.model.features[24:].parameters():
+        #     param.requires_grad = True
 
         # Unfreeze the fully connected layers
         for param in self.model.classifier.parameters():
@@ -123,11 +116,11 @@ class Vgg(pl.LightningModule):
         y_pred_logits = y_pred.softmax(dim=-1)
 
         # Metrics
-        self.test_f1.update(y_pred_logits, labels)
+        self.test_f1_per_class.update(y_pred_logits, labels)
 
     def on_test_epoch_end(self):
         f1_per_class = self.test_f1.compute()
-        self.test_f1.reset()
+        self.test_f1_per_class.reset()
 
         # Log the per-class F1 scores
         for i, f1 in enumerate(f1_per_class):

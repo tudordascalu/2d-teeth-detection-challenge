@@ -3,6 +3,7 @@ import torch
 import yaml
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import ModelCheckpoint
+from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import DataLoader, WeightedRandomSampler
 from pytorch_lightning import loggers
 from torchvision.transforms import transforms, InterpolationMode
@@ -33,9 +34,9 @@ if __name__ == "__main__":
 
     # Load train val test splits
     y_train, y_val, y_test = np.load(
-        f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_train.npy", allow_pickle=True), \
-        np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_val.npy", allow_pickle=True), \
-        np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_test.npy", allow_pickle=True)
+        f"data/final/y_quadrant_enumeration_disease_unpacked_train.npy", allow_pickle=True), \
+        np.load(f"data/final/y_quadrant_enumeration_disease_unpacked_val.npy", allow_pickle=True), \
+        np.load(f"data/final/y_quadrant_enumeration_disease_unpacked_test.npy", allow_pickle=True)
 
     dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays")
     dataset_train = ToothDataset(y_train, transform=transform_train, **dataset_args)
@@ -43,10 +44,15 @@ if __name__ == "__main__":
     dataset_test = ToothDataset(y_test, transform=transform, **dataset_args)
 
     # Prepare weighted sampler for balancing class distribution across epochs
-    y_train_labels = torch.tensor([sample["annotation"]["category_id_3"] for sample in y_train], dtype=torch.int64)
-    class_sample_count = torch.bincount(y_train_labels)
+    encoder = LabelEncoder()
+    targets = [
+        sample["annotation"]["category_id_2"] * 10 + sample["annotation"]["category_id_3"] + 1
+        for sample in y_train
+    ]
+    targets_encoded = encoder.fit_transform(targets)
+    class_sample_count = torch.bincount(torch.from_numpy(targets_encoded))
     weight = 1. / class_sample_count.float()
-    samples_weight = torch.tensor([weight[t] for t in y_train_labels])
+    samples_weight = torch.tensor([weight[t] for t in targets_encoded])
     sampler = WeightedRandomSampler(samples_weight, num_samples=len(samples_weight), replacement=True)
 
     # Initialize loaders
