@@ -2,8 +2,9 @@ import torch.nn.functional as F
 
 
 class DiceScore:
-    def __init__(self, smooth=1e-5):
+    def __init__(self, smooth=1e-5, ignore_background=False):
         self.smooth = smooth
+        self.ignore_background = ignore_background
 
     def __call__(self, prediction, target):
         """
@@ -18,6 +19,11 @@ class DiceScore:
         # Apply softmax to prediction pixel across the "c" classes
         prediction = F.softmax(prediction, dim=1)
 
+        # Ignore the background if the parameter is set to True
+        if self.ignore_background:
+            prediction = prediction[:, 1:, :, :]
+            target = target[:, 1:, :, :]
+
         # Convert prediction and target tensors to contiguous
         prediction = prediction.contiguous()
         target = target.contiguous()
@@ -27,12 +33,12 @@ class DiceScore:
         dice_score = (2. * intersection + self.smooth) / (
                 prediction.sum(dim=2).sum(dim=2) + target.sum(dim=2).sum(dim=2) + self.smooth)
 
-        return dice_score
+        return dice_score.mean()
 
 
 class DiceLoss:
-    def __init__(self, smooth=1e-5):
-        self.dice_score = DiceScore(smooth)
+    def __init__(self, smooth=1e-5, ignore_background=False):
+        self.dice_score = DiceScore(smooth=smooth, ignore_background=ignore_background)
 
     def __call__(self, prediction, target):
         """
