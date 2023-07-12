@@ -1,6 +1,4 @@
 import json
-from itertools import groupby
-from operator import itemgetter
 
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -11,7 +9,7 @@ from src.visualization.scripts.draw_image_with_boxes import DrawImageWithBoxes
 
 if __name__ == "__main__":
     # Load data
-    with open("output/predictions_filtered.json") as f:
+    with open("output/predictions.json") as f:
         predictions = json.load(f)
     validation_meta = pd.read_excel("data/raw/validation_data/validation_data.xlsx")
 
@@ -33,4 +31,4 @@ if __name__ == "__main__":
         labels = sample["category_id_3"]
         fig = draw_image_with_boxes(image, boxes, labels)
         plt.title(f"Red - Impacted; Green - Caries; Blue - Periapical lesion; Yellow - deep caries")
-        fig.savefig(f"visualizations/predictions_filtered/{file_name}")
+        fig.savefig(f"visualizations/predictions/{file_name}")
