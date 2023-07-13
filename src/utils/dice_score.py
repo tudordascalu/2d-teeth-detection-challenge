@@ -16,11 +16,15 @@ class DiceScore:
         :param target: one-hot encoded list of target masks for each disease of shape (n, c, w, h)
         :return: (2 * intersection + smooth) / (intersection + union)
         """
-        # Apply softmax to prediction pixel across the "c" classes
-        prediction = F.softmax(prediction, dim=1)
+        # Apply softmax or sigmoid depending on the number of classes
+        c = prediction.shape[1]
+        if c == 1:
+            prediction = F.sigmoid(prediction)
+        else:
+            prediction = F.softmax(prediction, dim=1)
 
         # Ignore the background if the parameter is set to True
-        if self.ignore_background:
+        if self.ignore_background and c > 1:
             prediction = prediction[:, 1:, :, :]
             target = target[:, 1:, :, :]
 
