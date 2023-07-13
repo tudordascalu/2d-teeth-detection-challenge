@@ -2,7 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
-from torch.nn import CrossEntropyLoss
+from torch.nn import CrossEntropyLoss, BCELoss
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -85,9 +85,10 @@ class UNet(LightningModule):
         self.config = config
 
         # Utilities
-        self.dice_score = DiceScore(ignore_background=True)
+        self.dice_score = DiceScore()
         self.dice_loss = DiceLoss()
-        self.cross_entropy = CrossEntropyLoss()
+        self.ce_loss = CrossEntropyLoss()
+        self.bce_loss = BCELoss()
 
         # Model
         self.inc = DoubleConv(1, 64)
@@ -99,7 +100,7 @@ class UNet(LightningModule):
         self.up2 = Up(512, 256 // 2)
         self.up3 = Up(256, 128 // 2)
         self.up4 = Up(128, 64)
-        self.outc = OutConv(64, 1)
+        self.outc = OutConv(64, self.config["n_classes"])
 
     def forward(self, x):
         # Encoder
@@ -115,7 +116,7 @@ class UNet(LightningModule):
         x = self.up3(x, x2)
         x = self.up4(x, x1)
 
-        # Last activation
+        # Last layer
         x = self.outc(x)
         return x
 
@@ -139,7 +140,7 @@ class UNet(LightningModule):
         prediction = self.forward(input)
 
         # Log metrics
-        loss = (self.cross_entropy(prediction, torch.argmax(mask, dim=1)) + self.dice_loss(prediction, mask)) / 2
+        loss = self._loss(prediction, mask)
         self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
         self.log("train_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_step=True, on_epoch=True)
         return loss
@@ -149,8 +150,7 @@ class UNet(LightningModule):
         prediction = self.forward(input)
 
         # Log metrics
-        loss = (self.cross_entropy(prediction, torch.argmax(mask, dim=1)) + self.dice_loss(prediction, mask)) / 2
-        self.log("val_loss", loss, prog_bar=True,
+        self.log("val_loss", self._loss(prediction, mask), prog_bar=True,
                  on_step=True, on_epoch=True)
         self.log("val_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_step=True, on_epoch=True)
 
@@ -159,7 +159,13 @@ class UNet(LightningModule):
         prediction = self.forward(input)
 
         # Log metrics
-        loss = (self.cross_entropy(prediction, torch.argmax(mask, dim=1)) + self.dice_loss(prediction, mask)) / 2
-        self.log("test_loss", loss, prog_bar=True,
+        self.log("test_loss", self._loss(prediction, mask), prog_bar=True,
                  on_step=True, on_epoch=True)
         self.log("test_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_epoch=True)
+
+    def _loss(self, prediction, target):
+        # Use a combination of cross entropy and dice loss
+        if self.config["n_classes"] == 1:
+            return (self.bce_loss(prediction, target) + self.dice_loss(prediction, target)) / 2
+        else:
+            return (self.ce_loss(prediction, torch.argmax(target, dim=1)) + self.dice_loss(prediction, target)) / 2
