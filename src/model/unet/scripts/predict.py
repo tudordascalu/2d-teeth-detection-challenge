@@ -3,7 +3,7 @@ import torch
 import yaml
 from torchvision.transforms import transforms
 from tqdm import tqdm
-
+import torch.nn.functional as F
 from src.data.tooth_segmentation_dataset import ToothSegmentationDataset
 from src.model.unet.unet import UNet
 from src.utils.transforms import SquarePad
@@ -17,7 +17,7 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Load data
-    X = np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_train.npy",
+    X = np.load(f"data/processed/y_quadrant_enumeration_disease_with_healthy_samples_unpacked.npy",
                 allow_pickle=True)
 
     transform_input = transforms.Compose([
@@ -37,18 +37,16 @@ if __name__ == "__main__":
 
     # Load model
     model = UNet.load_from_checkpoint(
-        f"checkpoints/unet/version_23/checkpoints/epoch=epoch=316-val_dice_score=train_loss=0.01.ckpt")
+        f"checkpoints/unet/version_32/checkpoints/epoch=epoch=81-val_loss=val_loss=0.39.ckpt")
     model.eval()
 
     # Predict for each sample
     for sample in tqdm(dataset, total=len(dataset)):
         input, mask, label = sample["image"], sample["mask"], sample["label"]
 
-        if label != 4:
-            with torch.no_grad():
-                prediction = model(input.unsqueeze(0)).squeeze().argmax(0)
-            plt.imshow(input[0], cmap="gray")
-            plt.imshow(prediction, alpha=.5)
-            plt.show()
-            plt.close()
-            print("da")
+        with torch.no_grad():
+            prediction = model(input.unsqueeze(0)).squeeze()
+        plt.imshow(input[0], cmap="gray")
+        plt.imshow(F.sigmoid(prediction), alpha=.5)
+        plt.show()
+        plt.close()
