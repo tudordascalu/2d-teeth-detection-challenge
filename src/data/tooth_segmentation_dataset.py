@@ -8,7 +8,7 @@ import torch.nn.functional as F
 
 class ToothSegmentationDataset(Dataset):
     def __init__(self, dataset, data_dir="data", transform=None, transform_input=None, transform_target=None):
-        self.dataset = np.array(list(filter(lambda x: x["annotation"]["category_id_3"] != 4, dataset)))
+        self.dataset = dataset
         self.transform = transform
         self.transform_input = transform_input
         self.transform_target = transform_target
@@ -32,19 +32,9 @@ class ToothSegmentationDataset(Dataset):
             tooth = sample["annotation"]["category_id_2"]
             mask = nib.load(
                 f"{self.data_dir}/final/masks/{disease}_{tooth}_{quadrant}_{image_name.split('.')[0]}_Segmentation.nii").get_fdata()
-
-            # Assign deep caries the last mask
-            if disease == 3:
-                mask *= 2
         except:
-            # Create empty mask if it does not exist
             mask = np.zeros((image.shape[2], image.shape[1], 1))
-
-        # Perform one hot encoding
-        mask = F.one_hot(
-            torch.from_numpy(mask).permute(2, 1, 0).squeeze().to(torch.int64),
-            num_classes=3
-        ).permute(2, 0, 1).to(torch.float32)
+        mask = torch.from_numpy(mask).permute(2, 1, 0)
 
         # Apply transforms
         if self.transform is not None:
