@@ -27,7 +27,7 @@ if __name__ == "__main__":
     assignment_solver = AssignmentSolver()
 
     # Compute sample names
-    data_path = "../output/version_3__epoch=76-step=2156"
+    data_path = "../output/version_3__epoch=epoch=88-val_loss=val_loss=0"
     samples = list(map(lambda x: x.split("/")[-1], glob.glob(f"{data_path}/*")))
 
     for sample in tqdm(samples, total=len(samples)):
@@ -56,15 +56,18 @@ if __name__ == "__main__":
 
         # Load model
         model = MultiObjectLabelingCNN.load_from_checkpoint(
-            "../checkpoints/multi_object_labeling_cnn/version_11/checkpoints/epoch=epoch=15-val_loss=val_loss=0.01.ckpt")
+            "../checkpoints/multi_object_labeling_cnn/version_5/checkpoints/epoch=epoch=71-val_loss=val_loss=0.00.ckpt")
 
         # Predict
-        labels = model(input.unsqueeze(0))
+        labels_predicted = model(input.unsqueeze(0))
 
         # Process labels
-        labels = labels.detach().cpu().numpy()
-        labels, _ = assignment_solver(labels)
-        labels = labels[0]
+        labels_predicted = labels_predicted.detach().cpu().numpy()
+        labels_predicted, _ = assignment_solver(labels_predicted)
+        labels_predicted = labels_predicted[0]
+
+        # Use predicted labels to correct labels
+        labels = [labels_predicted[label - 1] + 1 for label in labels]
 
         # Save dict
         predictions_processed = dict(boxes=boxes, labels=labels, scores=scores)

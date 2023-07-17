@@ -19,7 +19,7 @@ def assign_prediction_eval_labels(targets, predictions, iou_threshold=0.5):
     target_boxes = targets["boxes"]
     target_labels = encoder.inverse_transform(np.array(targets["labels"]))
     prediction_boxes = predictions["boxes"]
-    prediction_labels = encoder.inverse_transform(np.array(predictions["labels"]) + 1)
+    prediction_labels = encoder.inverse_transform(np.array(predictions["labels"]))
     # Initialize label accumulator
     prediction_eval_labels = np.zeros(len(prediction_labels), dtype=np.int32)
     iou_mat = box_iou(torch.tensor(target_boxes), torch.tensor(prediction_boxes))
@@ -53,9 +53,9 @@ def assign_prediction_eval_labels(targets, predictions, iou_threshold=0.5):
 
 if __name__ == "__main__":
     suffix = "processed"
+    checkpoint = "version_3__epoch=epoch=88-val_loss=val_loss=0"
     task = "quadrant_enumeration"
     colors = np.load("../data/assets/colors.npy")
-    checkpoint = "version_3__epoch=76-step=2156"
     if not os.path.exists(f"../visualizations/{checkpoint}"):
         os.mkdir(f"../visualizations/{checkpoint}")
     output_path = f"../output/{checkpoint}"
