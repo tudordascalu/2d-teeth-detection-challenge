@@ -16,12 +16,6 @@ if __name__ == "__main__":
         X_healthy_sample = X_healthy[file_names_healthy == file_name]
         X_healthy_selection.extend(X_healthy_sample)
 
-    # # Loop through all tooth - category combinations and select "n" samples
-    # for quadrant in np.arange(0, 4):
-    #     for tooth in np.arange(0, 8):
-    #         X_quadrant_tooth = X_healthy[np.where((quadrants == quadrant) & (teeth == tooth))]
-    #         X_healthy_selection.extend(X_quadrant_tooth[:n])
-
     # Select all samples with diseases and masks available
     X = np.load("data/processed/y_quadrant_enumeration_disease_unpacked.npy", allow_pickle=True)
     diseases = np.array([sample["annotation"]["category_id_3"] for sample in X])

@@ -21,11 +21,11 @@ if __name__ == "__main__":
     p_test = 0.15
 
     # Load data
-    x = np.load("data/processed/y_quadrant_enumeration_disease_unpacked.npy", allow_pickle=True)
+    x = np.load("data/processed/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked.npy", allow_pickle=True)
 
     # Extract combination of tooth-disease labels for stratification
     tooth_disease_combination = [
-        sample["annotation"]["category_id_3"] * 10 + sample["annotation"]["category_id_2"] + 1
+        sample["annotation"]["category_id_3"]
         for sample in x
     ]
 
@@ -34,4 +34,4 @@ if __name__ == "__main__":
 
     # Save results
     for split, x_split in zip(["train", "val", "test"], [x_train, x_val, x_test]):
-        np.save(f"data/final/y_quadrant_enumeration_disease_unpacked_{split}.npy", x_split)
+        np.save(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_{split}.npy", x_split)
