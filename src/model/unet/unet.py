@@ -1,8 +1,11 @@
+import itertools
+
 import torch
+import torchmetrics
 from torch import nn
 import torch.nn.functional as F
 from pytorch_lightning import LightningModule
-from torch.nn import CrossEntropyLoss, BCELoss
+from torch.nn import CrossEntropyLoss, BCEWithLogitsLoss
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 
@@ -88,19 +91,56 @@ class UNet(LightningModule):
         self.dice_score = DiceScore()
         self.dice_loss = DiceLoss()
         self.ce_loss = CrossEntropyLoss()
-        self.bce_loss = BCELoss()
+        self.bce_loss = BCEWithLogitsLoss()
+        self.train_f1 = torchmetrics.F1Score("multiclass",
+                                             average="macro",
+                                             num_classes=5)
+        self.val_f1 = torchmetrics.F1Score("multiclass",
+                                           average="macro",
+                                           num_classes=5)
+        self.val_f1_per_class = torchmetrics.F1Score("multiclass",
+                                                     average=None,
+                                                     num_classes=5)
+        self.test_f1_per_class = torchmetrics.F1Score("multiclass",
+                                                      average=None,
+                                                      num_classes=5)
+        self.test_f1 = torchmetrics.F1Score("multiclass",
+                                            average="macro",
+                                            num_classes=5)
 
         # Model
         self.inc = DoubleConv(1, 64)
         self.down1 = Down(64, 128)
         self.down2 = Down(128, 256)
         self.down3 = Down(256, 512)
-        self.down4 = Down(512, 1024 // 2)
-        self.up1 = Up(1024, 512 // 2)
-        self.up2 = Up(512, 256 // 2)
-        self.up3 = Up(256, 128 // 2)
+        self.down4 = Down(512, 1024)
+        self.up1 = Up(1024, 512)
+        self.up2 = Up(512, 256)
+        self.up3 = Up(256, 128)
         self.up4 = Up(128, 64)
-        self.outc = OutConv(64, self.config["n_classes"])
+        self.outc = OutConv(64, 1)
+
+        self.classifier = nn.Sequential(
+            nn.AdaptiveAvgPool2d((1, 1)),
+            nn.Flatten(),
+            nn.Linear(1024, 512),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(512, 256),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(256, 128),
+            nn.ReLU(inplace=True),
+            nn.Dropout(0.5),
+            nn.Linear(128, 5),
+            nn.Sigmoid()
+        )
+
+        if self.config["mode"] == "segmentation":
+            # Freeze all layers for the classifier
+            self.update_classification_requires_grad(False)
+        else:
+            self.update_segmentation_requires_grad(False)
 
     def forward(self, x):
         # Encoder
@@ -115,10 +155,12 @@ class UNet(LightningModule):
         x = self.up2(x, x3)
         x = self.up3(x, x2)
         x = self.up4(x, x1)
+        x_segmentation = self.outc(x)
 
-        # Last layer
-        x = self.outc(x)
-        return x
+        # Classifier
+        x_classification = self.classifier(x5)
+
+        return dict(segmentation=x_segmentation, classification=x_classification)
 
     def configure_optimizers(self):
         optimizer = RMSprop(self.parameters(),
@@ -140,32 +182,82 @@ class UNet(LightningModule):
         prediction = self.forward(input)
 
         # Log metrics
-        loss = self._loss(prediction, mask)
-        self.log("train_loss", loss, prog_bar=True, on_step=True, on_epoch=True)
-        self.log("train_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_step=True, on_epoch=True)
-        return loss
+        loss_segmentation = self._loss_segmentation(prediction["segmentation"], mask)
+        loss_classification = self._loss_classification(prediction["classification"], label)
+        self.log("train_loss_segmentation", loss_segmentation, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("train_loss_classification", loss_classification, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("train_dice_score", self.dice_score(prediction["segmentation"], mask), prog_bar=True, on_step=True,
+                 on_epoch=True)
+
+        if self.config["mode"] == "segmentation":
+            return loss_segmentation
+        else:
+            return loss_classification
 
     def validation_step(self, val_batch, batch_idx):
         input, mask, label = val_batch["image"], val_batch["mask"], val_batch["label"]
         prediction = self.forward(input)
 
         # Log metrics
-        self.log("val_loss", self._loss(prediction, mask), prog_bar=True,
-                 on_step=True, on_epoch=True)
-        self.log("val_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_step=True, on_epoch=True)
+        loss_segmentation = self._loss_segmentation(prediction["segmentation"], mask)
+        loss_classification = self._loss_classification(prediction["classification"], label)
+        self.log("val_loss_segmentation", loss_segmentation, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("val_loss_classification", loss_classification, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("val_dice_score", self.dice_score(prediction["segmentation"], mask), prog_bar=True, on_step=True,
+                 on_epoch=True)
+        self.log("val_f1", self.val_f1(prediction["classification"].softmax(dim=-1), label), on_step=False,
+                 on_epoch=True)
+        self.val_f1_per_class.update(prediction["classification"].softmax(dim=-1), label)
+
+        if self.config["mode"] == "segmentation":
+            self.log("val_loss", loss_segmentation, prog_bar=True, on_step=True, on_epoch=True)
+        else:
+            self.log("val_loss", loss_classification, prog_bar=True, on_step=True, on_epoch=True)
+
+    def on_validation_epoch_end(self):
+        f1_per_class = self.val_f1_per_class.compute()
+        self.val_f1_per_class.reset()
+
+        # Log the per-class F1 scores
+        for i, f1 in enumerate(f1_per_class):
+            self.log(f'val_f1_class_{i}', f1)
 
     def test_step(self, test_batch, batch_idx):
         input, mask, label = test_batch["image"], test_batch["mask"], test_batch["label"]
         prediction = self.forward(input)
 
         # Log metrics
-        self.log("test_loss", self._loss(prediction, mask), prog_bar=True,
-                 on_step=True, on_epoch=True)
-        self.log("test_dice_score", self.dice_score(prediction, mask), prog_bar=True, on_epoch=True)
+        loss_segmentation = self._loss_segmentation(prediction["segmentation"], mask)
+        loss_classification = self._loss_classification(prediction["classification"], label)
+        self.log("val_loss_segmentation", loss_segmentation, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("val_loss_classification", loss_classification, prog_bar=True, on_step=True, on_epoch=True)
+        self.log("test_dice_score", self.dice_score(prediction["segmentation"], mask), prog_bar=True, on_epoch=True)
+        self.log("test_f1", self.test_f1(prediction["classification"].softmax(dim=-1), label), on_step=False,
+                 on_epoch=True)
+        self.test_f1_per_class.update(prediction["classification"].softmax(dim=-1), label)
 
-    def _loss(self, prediction, target):
+    def on_test_epoch_end(self):
+        f1_per_class = self.test_f1_per_class.compute()
+        self.test_f1_per_class.reset()
+
+        # Log the per-class F1 scores
+        for i, f1 in enumerate(f1_per_class):
+            self.log(f'test_f1_class_{i}', f1)
+
+    def _loss_segmentation(self, prediction, target):
         # Use a combination of cross entropy and dice loss
-        if self.config["n_classes"] == 1:
-            return (self.bce_loss(prediction, target) + self.dice_loss(prediction, target)) / 2
-        else:
-            return (self.ce_loss(prediction, torch.argmax(target, dim=1)) + self.dice_loss(prediction, target)) / 2
+        return (self.bce_loss(prediction, target) + self.dice_loss(prediction, target)) / 2
+
+    def _loss_classification(self, prediction, target):
+        # Use a combination of cross entropy and dice loss
+        # TODO: change this to BCEloss once the target and training data is prepared to handle multiple classes
+        return self.ce_loss(prediction, target)
+
+    def update_segmentation_requires_grad(self, requires_grad=False):
+        for param in itertools.chain(self.up1.parameters(), self.up2.parameters(), self.up3.parameters(),
+                                     self.up4.parameters(), self.outc.parameters()):
+            param.requires_grad = requires_grad
+
+    def update_classification_requires_grad(self, requires_grad=False):
+        for param in self.classifier.parameters():
+            param.requires_grad = requires_grad

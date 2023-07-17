@@ -19,12 +19,12 @@ if __name__ == "__main__":
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
     # Transforms
-    # transform_train = transforms.Compose([
-    #     transforms.RandomHorizontalFlip(p=.5),
-    #     transforms.RandomAffine(degrees=15, scale=(0.8, 1.2), translate=(.1, .1), shear=10),
-    # ])
+    transform_train = transforms.Compose([
+        transforms.RandomHorizontalFlip(p=.5),
+        transforms.RandomAffine(degrees=15, scale=(0.8, 1.2), translate=(.1, .1), shear=10),
+    ])
     transform_input_train = transforms.Compose([
-        # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
         SquarePad(),
         transforms.Resize(224, interpolation=InterpolationMode.BILINEAR)
     ])
@@ -38,17 +38,28 @@ if __name__ == "__main__":
     ])
 
     # Load train val test splits
-    y_train, y_val, y_test = np.load(
-        f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_train.npy",
-        allow_pickle=True), \
-        np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_val.npy",
-                allow_pickle=True), \
-        np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_test.npy",
+    if config["mode"] == "segmentation":
+        y_train, y_val, y_test = np.load(
+            f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_train.npy",
+            allow_pickle=True), \
+            np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_val.npy",
+                    allow_pickle=True), \
+            np.load(
+                f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_test.npy",
                 allow_pickle=True)
+    else:
+        y_train, y_val, y_test = np.load(
+            f"data/final/y_quadrant_enumeration_disease_unpacked_train.npy",
+            allow_pickle=True), \
+            np.load(f"data/final/y_quadrant_enumeration_disease_unpacked_val.npy",
+                    allow_pickle=True), \
+            np.load(f"data/final/y_quadrant_enumeration_disease_unpacked_test.npy",
+                    allow_pickle=True)
 
     dataset_args = dict(data_dir=config["data_dir"], transform_target=transform_target)
     dataset_train = ToothSegmentationDataset(y_train,
                                              transform_input=transform_input_train,
+                                             transform=transform_train,
                                              **dataset_args)
     dataset_val = ToothSegmentationDataset(y_val,
                                            transform_input=transform_input,
@@ -57,26 +68,36 @@ if __name__ == "__main__":
                                             transform_input=transform_input,
                                             **dataset_args)
 
-    # # Prepare weighted sampler for balancing class distribution across epochs
-    # encoder = LabelEncoder()
-    # targets = [
-    #     sample["annotation"]["category_id_3"]
-    #     for sample in y_train
-    # ]
-    # targets_encoded = encoder.fit_transform(targets)
-    # class_sample_count = torch.bincount(torch.from_numpy(targets_encoded))
-    # weight = 1. / class_sample_count.float()
-    # samples_weight = torch.tensor([weight[t] for t in targets_encoded])
-    # sampler = WeightedRandomSampler(samples_weight, num_samples=len(samples_weight), replacement=True)
+    # Prepare weighted sampler for balancing class distribution across epochs
+    encoder = LabelEncoder()
+    targets = [
+        sample["annotation"]["category_id_3"]
+        for sample in y_train
+    ]
+    targets_encoded = encoder.fit_transform(targets)
+    class_sample_count = torch.bincount(torch.from_numpy(targets_encoded))
+    weight = 1. / class_sample_count.float()
+    samples_weight = torch.tensor([weight[t] for t in targets_encoded])
+    sampler = WeightedRandomSampler(samples_weight, num_samples=len(samples_weight), replacement=True)
 
     # Initialize loaders
     loader_args = dict(batch_size=config["batch_size"], num_workers=0, pin_memory=True)
-    loader_train = DataLoader(dataset_train, **loader_args)
+    loader_train = DataLoader(dataset_train, sampler=sampler, **loader_args)
     loader_val = DataLoader(dataset_val, **loader_args)
     loader_test = DataLoader(dataset_test, **loader_args)
 
     # Define model
-    model = UNet(config)
+    if config["checkpoint_path"] is not None:
+        model = UNet.load_from_checkpoint(config["checkpoint_path"])
+        model.config = config
+        if config["mode"] == "segmentation":
+            model.update_segmentation_requires_grad(True)
+            model.update_classification_requires_grad(False)
+        else:
+            model.update_segmentation_requires_grad(False)
+            model.update_classification_requires_grad(True)
+    else:
+        model = UNet(config)
     logger = loggers.TensorBoardLogger(save_dir=config["checkpoints_path"], name=None)
     trainer_args = dict(max_epochs=config["max_epochs"],
                         callbacks=[ModelCheckpoint(save_top_k=1,
