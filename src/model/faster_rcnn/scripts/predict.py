@@ -73,7 +73,7 @@ if __name__ == "__main__":
                 dict(bbox=box.tolist(),
                      score=score.item(),
                      label=label,
-                     ategory_id_1=quadrant,
+                     category_id_1=quadrant,
                      category_id_2=tooth,
                      category_id_3=4,
                      category_id_3_list=[4]))
