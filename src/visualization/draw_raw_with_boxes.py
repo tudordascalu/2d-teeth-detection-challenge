@@ -1,4 +1,6 @@
-import numpy as np
+import json
+import os
+
 from PIL import ImageDraw
 from torchvision.io import read_image
 from torchvision.transforms import transforms
@@ -6,14 +8,15 @@ from tqdm import tqdm
 
 if __name__ == "__main__":
     # Load data
-    y = np.load(f"data/processed/y_quadrant_enumeration_disease.npy", allow_pickle=True)
-    colors = ["red", "green", "blue", "yellow", "orange"]
+    with open("data/processed/train_quadrant_enumeration_disease_healthy.json") as f:
+        data = json.load(f)
 
     # Helpers
     to_pil = transforms.ToPILImage()
+    colors = ["red", "green", "blue", "yellow", "orange"]
 
-    for sample in tqdm(y, total=len(y)):
-        file_name = sample['file_name']
+    for sample in tqdm(data, total=len(data)):
+        file_name = sample["file_name"]
         image = read_image(f"data/raw/training_data/quadrant_enumeration_disease/xrays/{file_name}")
 
         # Convert image to pil draw
@@ -29,4 +32,6 @@ if __name__ == "__main__":
             draw.rectangle(box, outline=colors[label], width=4)
 
         # Save image
-        image_pil.save(f"visualizations/quadrant_enumeraton_disease/{file_name}")
+        if not os.path.exists("visualizations/quadrant_enumeration_disease_healthy"):
+            os.mkdir("visualizations/quadrant_enumeration_disease_healthy")
+        image_pil.save(f"visualizations/quadrant_enumeration_disease_healthy/{file_name}")
