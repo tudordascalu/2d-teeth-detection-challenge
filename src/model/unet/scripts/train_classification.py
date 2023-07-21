@@ -1,4 +1,5 @@
-import numpy as np
+import json
+
 import torch
 import yaml
 from pytorch_lightning import Trainer
@@ -38,41 +39,30 @@ if __name__ == "__main__":
     ])
 
     # Load train val test splits
-    if config["mode"] == "segmentation":
-        y_train, y_val, y_test = np.load(
-            f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_train.npy",
-            allow_pickle=True), \
-            np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_val.npy",
-                    allow_pickle=True), \
-            np.load(
-                f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_test.npy",
-                allow_pickle=True)
-    else:
-        y_train, y_val, y_test = np.load(
-            f"data/final/y_quadrant_enumeration_disease_unpacked_train.npy",
-            allow_pickle=True), \
-            np.load(f"data/final/y_quadrant_enumeration_disease_unpacked_val.npy",
-                    allow_pickle=True), \
-            np.load(f"data/final/y_quadrant_enumeration_disease_unpacked_test.npy",
-                    allow_pickle=True)
+    with open("data/final/train_quadrant_enumeration_disease_healthy_unpacked_train.json") as f:
+        X_train = json.load(f)
+    with open("data/final/train_quadrant_enumeration_disease_healthy_unpacked_val.json") as f:
+        X_val = json.load(f)
+    with open("data/final/train_quadrant_enumeration_disease_healthy_unpacked_test.json") as f:
+        X_test = json.load(f)
 
     dataset_args = dict(data_dir=config["data_dir"], transform_target=transform_target)
-    dataset_train = ToothSegmentationDataset(y_train,
+    dataset_train = ToothSegmentationDataset(X_train,
                                              transform_input=transform_input_train,
                                              transform=transform_train,
                                              **dataset_args)
-    dataset_val = ToothSegmentationDataset(y_val,
+    dataset_val = ToothSegmentationDataset(X_val,
                                            transform_input=transform_input,
                                            **dataset_args)
-    dataset_test = ToothSegmentationDataset(y_test,
+    dataset_test = ToothSegmentationDataset(X_test,
                                             transform_input=transform_input,
                                             **dataset_args)
 
-    # Prepare weighted sampler for balancing class distribution across epochs
+    # Prepare sampler
     encoder = LabelEncoder()
     targets = [
         sample["annotation"]["category_id_3"]
-        for sample in y_train
+        for sample in X_train
     ]
     targets_encoded = encoder.fit_transform(targets)
     class_sample_count = torch.bincount(torch.from_numpy(targets_encoded))
@@ -87,17 +77,15 @@ if __name__ == "__main__":
     loader_test = DataLoader(dataset_test, **loader_args)
 
     # Define model
-    if config["checkpoint_path"] is not None:
+    if "checkpoint_path" in config:
         model = UNet.load_from_checkpoint(config["checkpoint_path"])
         model.config = config
-        if config["mode"] == "segmentation":
-            model.update_segmentation_requires_grad(True)
-            model.update_classification_requires_grad(False)
-        else:
-            model.update_segmentation_requires_grad(False)
-            model.update_classification_requires_grad(True)
     else:
         model = UNet(config)
+
+    model.update_segmentation_requires_grad(False)
+    model.update_classification_requires_grad(True)
+
     logger = loggers.TensorBoardLogger(save_dir=config["checkpoints_path"], name=None)
     trainer_args = dict(max_epochs=config["max_epochs"],
                         callbacks=[ModelCheckpoint(save_top_k=1,
@@ -111,7 +99,7 @@ if __name__ == "__main__":
     if device.type == "cpu":
         trainer = Trainer(**trainer_args)
     else:
-        trainer = Trainer(accelerator="gpu", strategy="ddp", devices=2, **trainer_args)
+        trainer = Trainer(accelerator="gpu", strategy="ddp", devices=1, **trainer_args)
 
     # Train best model
     trainer.fit(model=model, train_dataloaders=loader_train, val_dataloaders=loader_val)
