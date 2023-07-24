@@ -4,3 +4,4 @@ checkpoints/*
 output/*
 notebooks/*
 visualizations/*
+pretrained_models/*
