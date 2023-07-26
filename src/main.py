@@ -5,14 +5,13 @@ import json
 
 import pandas as pd
 import torch
-from torch.nn.functional import softmax
+import torch.nn.functional as F
 from torchvision.io import read_image
-from torchvision.transforms import Compose, Resize, InterpolationMode, CenterCrop, transforms
+from torchvision.transforms import InterpolationMode, transforms
 from tqdm import tqdm
 
 from src.model.faster_rcnn.faster_rcnn import FasterRCNN
-from src.model.resnet.resnet import ResNet
-from src.model.vgg.vgg import Vgg
+from src.model.unet.unet import UNet
 from src.utils.label_encoder import LabelEncoder
 from src.utils.processors import UniqueClassNMSProcessor
 from src.utils.transforms import SquarePad
@@ -28,9 +27,13 @@ class PanoramicProcessor:
         self.faster_rcnn = FasterRCNN.load_from_checkpoint(
             f"checkpoints/faster_rcnn/version_3/checkpoints/epoch=epoch=88-val_loss=val_loss=0.81.ckpt")
         self.faster_rcnn.eval()
-        self.vgg = Vgg.load_from_checkpoint(
-            f"checkpoints/vgg/version_10/checkpoints/epoch=epoch=31-val_loss=val_f1=0.38.ckpt")
-        self.vgg.eval()
+        self.unet = UNet.load_from_checkpoint(
+            f"checkpoints/unet/version_63/checkpoints/epoch=epoch=35-val_loss=val_loss=0.20.ckpt")
+        self.unet.eval()
+        # self.vgg = Vgg.load_from_checkpoint(
+        #     f"checkpoints/vgg/version_10/checkpoints/epoch=epoch=31-val_loss=val_f1=0.38.ckpt")
+        # self.vgg.eval()
+
         # Utilities
         self.encoder = LabelEncoder()
         self.transform = transforms.Compose([
@@ -63,39 +66,52 @@ class PanoramicProcessor:
 
             # Classify teeth
             labels_2 = []
-            p_2 = []
             for box in boxes_1:
                 # Crop image
                 box_int = torch.tensor(box, dtype=torch.int64)
-                image_crop = image.repeat(3, 1, 1)[:, box_int[1]:box_int[3], box_int[0]:box_int[2]]
+
+                # image_crop = image.repeat(3, 1, 1)[:, box_int[1]:box_int[3], box_int[0]:box_int[2]]
+                image_crop = image[:, box_int[1]:box_int[3], box_int[0]:box_int[2]]
                 image_crop = self.transform(image_crop)
-                # Get label
-                output = softmax(self.vgg(image_crop.unsqueeze(0).to(self.device))[0])
-                label_2 = output.argmax()
-                p = output[label_2]
-                labels_2.append(label_2)
-                p_2.append(p)
+
+                # Get labels
+                prediction = self.unet(image_crop.unsqueeze(0).to(self.device))
+                labels = torch.where(F.sigmoid(prediction["classification"][0]) > .5)[0].detach().cpu().tolist()
+
+                # Save labels
+                labels_2.append(labels)
 
             # Extract affected teeth
-            labels_2 = torch.tensor(labels_2, dtype=torch.int64)
-            p_2 = torch.tensor(p_2, dtype=torch.float32)
-            indices = torch.where(labels_2 != 4)[0]
-            boxes_2 = boxes_1[indices].to("cpu").tolist()
-            scores_2 = scores_1[indices].to("cpu").tolist()
-            category_id_1_acc = category_id_1_acc[indices].tolist()
-            category_id_2_acc = category_id_2_acc[indices].tolist()
-            category_id_3_acc = labels_2[indices].tolist()
-            p_2 = p_2[indices].tolist()
+            boxes_2 = []
+            scores_2 = []
+            category_id_1_2 = []
+            category_id_2_2 = []
+            category_id_3_2 = []
+            for box, score, category_id_1, category_id_2, labels in zip(boxes_1,
+                                                                        scores_1,
+                                                                        category_id_1_acc,
+                                                                        category_id_2_acc,
+                                                                        labels_2):
+                if 4 not in labels:
+                    for category_id_3 in labels:
+                        boxes_2.append(box.to("cpu").tolist())
+                        category_id_1_2.append(category_id_1.item())
+                        category_id_2_2.append(category_id_2.item())
+                        category_id_3_2.append(category_id_3)
+                        scores_2.append(score.item())
 
             # Process boxes from x1y1x2y2 to xywh (COCO) format
             boxes_2 = [[box[0], box[1], box[2] - box[0], box[3] - box[1]] for box in boxes_2]
 
             # Append predictions
-            for box, score, category_id_1, category_id_2, category_id_3, p in zip(boxes_2, scores_2, category_id_1_acc,
-                                                                                  category_id_2_acc, category_id_3_acc,
-                                                                                  p_2):
+            for box, score, category_id_1, category_id_2, category_id_3 in zip(boxes_2, scores_2,
+                                                                               category_id_1_2,
+                                                                               category_id_2_2,
+                                                                               category_id_3_2):
                 predictions.append(dict(bbox=box, category_id_1=category_id_1, category_id_2=category_id_2,
-                                        category_id_3=category_id_3, score=score, image_id=image_id, p_category_id_3=p))
+                                        category_id_3=category_id_3, score=score, image_id=image_id))
+
+        print("am ajuns aici")
         with open("output/predictions.json", 'w') as f:
             json.dump(predictions, f)
 

@@ -1,3 +1,5 @@
+import json
+
 import numpy as np
 from sklearn.model_selection import train_test_split
 
@@ -21,17 +23,19 @@ if __name__ == "__main__":
     p_test = 0.15
 
     # Load data
-    x = np.load("data/processed/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked.npy", allow_pickle=True)
+    with open("data/processed/train_quadrant_enumeration_disease_healthy_unpacked.json") as f:
+        X = json.load(f)
 
     # Extract combination of tooth-disease labels for stratification
     tooth_disease_combination = [
-        sample["annotation"]["category_id_3"]
-        for sample in x
+        sample["annotation"]["category_id_3"] * 10 + sample["annotation"]["category_id_2"]
+        for sample in X
     ]
 
     # Compute train test split
-    x_train, x_val, x_test = get_train_validation_test_splits(x, p_val, p_test, tooth_disease_combination)
+    X_train, X_val, X_test = get_train_validation_test_splits(X, p_val, p_test, tooth_disease_combination)
 
     # Save results
-    for split, x_split in zip(["train", "val", "test"], [x_train, x_val, x_test]):
-        np.save(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_and_segmentation_unpacked_{split}.npy", x_split)
+    for split, x_split in zip(["train", "val", "test"], [X_train, X_val, X_test]):
+        with open(f"data/final/train_quadrant_enumeration_disease_healthy_unpacked_{split}.json", "w") as f:
+            json.dump(x_split, f, indent=4)

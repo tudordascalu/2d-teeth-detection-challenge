@@ -22,7 +22,7 @@ if __name__ == "__main__":
     # Transforms
     transform_train = transforms.Compose([
         transforms.RandomAffine(degrees=10, scale=(0.8, 1.2)),
-        transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
+        # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
         SquarePad(),
         transforms.Resize(224, interpolation=InterpolationMode.BILINEAR)  # Resize to 256 on the smaller edge
     ])
@@ -34,11 +34,11 @@ if __name__ == "__main__":
 
     # Load train val test splits
     y_train, y_val, y_test = np.load(
-        f"data/final/y_quadrant_enumeration_disease_unpacked_train.npy", allow_pickle=True), \
-        np.load(f"data/final/y_quadrant_enumeration_disease_unpacked_val.npy", allow_pickle=True), \
-        np.load(f"data/final/y_quadrant_enumeration_disease_unpacked_test.npy", allow_pickle=True)
+        f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_train.npy", allow_pickle=True), \
+        np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_val.npy", allow_pickle=True), \
+        np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_test.npy", allow_pickle=True)
 
-    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays")
+    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays", device=device)
     dataset_train = ToothDataset(y_train, transform=transform_train, **dataset_args)
     dataset_val = ToothDataset(y_val, transform=transform, **dataset_args)
     dataset_test = ToothDataset(y_test, transform=transform, **dataset_args)
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     # Prepare weighted sampler for balancing class distribution across epochs
     encoder = LabelEncoder()
     targets = [
-        sample["annotation"]["category_id_2"] * 10 + sample["annotation"]["category_id_3"] + 1
+        sample["annotation"]["category_id_3"]
         for sample in y_train
     ]
     targets_encoded = encoder.fit_transform(targets)

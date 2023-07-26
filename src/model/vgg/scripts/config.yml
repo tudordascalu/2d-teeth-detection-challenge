@@ -3,7 +3,7 @@ image_dir: data/raw/training_data
 output_path: output/
 checkpoints_path: checkpoints/vgg/
 data_type: quadrant_enumeration_disease # quadrant | quadrant_enumeration | quadrant_enumeration_disease
-n_classes: 5
+n_classes: 4
 
 
 # Model

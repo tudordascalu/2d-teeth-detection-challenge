@@ -5,7 +5,8 @@ import torch
 import torchvision
 import pytorch_lightning as pl
 from torchmetrics.detection.mean_ap import MeanAveragePrecision
-from torchvision.models.detection.faster_rcnn import FastRCNNPredictor
+from torchvision.models import ResNet50_Weights
+from torchvision.models.detection.faster_rcnn import FastRCNNPredictor, FasterRCNN_ResNet50_FPN_Weights
 
 
 class FasterRCNN(pl.LightningModule):
@@ -14,7 +15,12 @@ class FasterRCNN(pl.LightningModule):
         self.save_hyperparameters()
         self.config = config
         # Load the pretrained Faster R-CNN model with ResNet-50 backbone
-        self.model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained=True)
+        if self.config["pretrained"]:
+            self.model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
+                weights=FasterRCNN_ResNet50_FPN_Weights.COCO_V1,
+                weights_backbone=ResNet50_Weights.IMAGENET1K_V1)
+        else:
+            self.model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights=None, weights_backbone=None)
         # Replace the classifier head with a new one to match the number of classes
         in_features = self.model.roi_heads.box_predictor.cls_score.in_features
         self.model.roi_heads.box_predictor = FastRCNNPredictor(in_features, self.config["n_teeth"] + 1)

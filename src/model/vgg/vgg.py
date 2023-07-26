@@ -47,9 +47,9 @@ class Vgg(pl.LightningModule):
         for param in self.model.parameters():
             param.requires_grad = False
 
-        # # Unfreeze the last convolutional block (block5)
-        # for param in self.model.features[24:].parameters():
-        #     param.requires_grad = True
+        # Unfreeze the last convolutional block (block5)
+        for param in self.model.features[24:].parameters():
+            param.requires_grad = True
 
         # Unfreeze the fully connected layers
         for param in self.model.classifier.parameters():
