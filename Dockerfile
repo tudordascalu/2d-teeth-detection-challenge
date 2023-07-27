@@ -19,6 +19,6 @@ COPY --chown=user:user requirements.txt /opt/app/
 RUN python -m piptools sync requirements.txt
 
 COPY --chown=user:user src /opt/app/src
-COPY --chown=user:user checkpoints /opt/app/checkpoints
+COPY --chown=user:user pretrained_models /opt/app/pretrained_models
 
 ENTRYPOINT [ "python", "-m", "src.process" ]

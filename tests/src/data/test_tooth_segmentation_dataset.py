@@ -27,7 +27,7 @@ class TestToothSegmentationDataset(unittest.TestCase):
         self.assertEqual(label, 4)
         self.assertTrue(image.min() >= 0 and image.max() <= 1)
         self.assertEquals(mask.unique().tolist(), [0, 1])
-        self.assertEqual(image.shape, (3, 331, 85))
+        self.assertEqual(image.shape, (1, 331, 85))
         self.assertEqual(mask.shape, (3, 331, 85))
 
     def test_get_item_with_mask(self):
@@ -40,7 +40,7 @@ class TestToothSegmentationDataset(unittest.TestCase):
         self.assertEqual(label, 3)
         self.assertTrue(image.min() >= 0 and image.max() <= 1)
         self.assertEquals(mask.unique().tolist(), [0, 1])
-        self.assertEqual(image.shape, (3, 276, 253))
+        self.assertEqual(image.shape, (1, 276, 253))
         self.assertEqual(mask.shape, (3, 276, 253))
         self.assertEquals(mask.unique().tolist(), [0, 1])
 
@@ -65,7 +65,7 @@ class TestToothSegmentationDataset(unittest.TestCase):
         self.assertEqual(label, 3)
         self.assertTrue(image.min() >= 0 and image.max() <= 1)
         self.assertEquals(mask.unique().tolist(), [0, 1])
-        self.assertEqual(image.shape, (3, 224, 224))
+        self.assertEqual(image.shape, (1, 224, 224))
         self.assertEqual(mask.shape, (3, 224, 224))
         self.assertEquals(mask.unique().tolist(), [0, 1])
 

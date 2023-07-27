@@ -146,7 +146,7 @@ class PanoramicProcessor:
 
                 # Get labels
                 prediction = self.unet(image_crop.unsqueeze(0).to(self.device))
-                labels = torch.where(F.sigmoid(prediction["classification"][0]) > .5)[0].detach().cpu().tolist()
+                labels = torch.where(torch.sigmoid(prediction["classification"][0]) > .5)[0].detach().cpu().tolist()
 
                 # Save labels
                 labels_2.append(labels)
@@ -177,7 +177,7 @@ class PanoramicProcessor:
                                                                                category_id_2_2,
                                                                                category_id_3_2):
                 predictions["boxes"].append(dict(
-                    name=f"{category_id_1}-{category_id_2}-{category_id_3}",
+                    name=f"{category_id_1} - {category_id_2} - {category_id_3}",
                     corners=self.get_corners(box, image_id),
                     probability=score
                 ))
@@ -196,7 +196,7 @@ class PanoramicProcessor:
         """
         x1, y1, x2, y2 = box
 
-        return [[x1, y1, id], [x1, y2, id], [x2, y2, id], [x2, y1, id]]
+        return [[x1, y1, id], [x1, y2, id], [x2, y1, id], [x2, y2, id]]
 
 
 if __name__ == "__main__":

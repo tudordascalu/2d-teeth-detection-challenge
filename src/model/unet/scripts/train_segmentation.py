@@ -55,8 +55,8 @@ if __name__ == "__main__":
         X_val = json.load(f)
 
     # Include only apical lesions for segmentation mode
-    X_train = list(filter(lambda x: x["annotation"]["category_id_3"] == 2 and mask_exists(x), X_train))
-    X_val = list(filter(lambda x: x["annotation"]["category_id_3"] == 2 and mask_exists(x), X_val))
+    X_train = list(filter(lambda x: mask_exists(x), X_train))
+    X_val = list(filter(lambda x: mask_exists(x), X_val))
 
     dataset_args = dict(data_dir=config["data_dir"], transform_target=transform_target)
     dataset_train = ToothSegmentationDataset(X_train,
