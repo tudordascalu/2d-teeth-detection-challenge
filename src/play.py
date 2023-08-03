@@ -1,7 +1,62 @@
+# import json
+#
+# import numpy as np
+# import torch
+# import torchmetrics
+# import matplotlib.pyplot as plt
+#
+# if __name__ == "__main__":
+#     with open("output/unet_predict.json", "r") as f:
+#         data = json.load(f)
+#
+#     threshold_list = torch.arange(0, 1, .1)
+#     f1_per_class_list = [
+#         torchmetrics.F1Score("multilabel", average=None, num_labels=5, threshold=threshold.item())
+#         for threshold in threshold_list]
+#     f1_macro_list = [
+#         torchmetrics.F1Score("multilabel", average="macro", num_labels=5, threshold=threshold.item())
+#         for threshold in threshold_list]
+#
+#     # Extract predictions
+#     predictions = torch.tensor([sample["prediction"] for sample in data]).squeeze()
+#     labels = torch.tensor([sample["label"] for sample in data])
+#
+#     # Apply sigmoid
+#     predictions = torch.sigmoid(predictions)
+#
+#     # Compute
+#     result_list = []
+#     for threshold, f1_per_class, f1_macro in zip(threshold_list, f1_per_class_list, f1_macro_list):
+#         f1_per_class.update(predictions, labels)
+#         f1_macro.update(predictions, labels)
+#         result_list.append(
+#             dict(threshold=threshold, f1_per_class=f1_per_class.compute().tolist(), f1_macro=f1_macro.compute()))
+#
+#     # Plot results
+#     f1_macro_list = [result["f1_macro"] for result in result_list]
+#     f1_per_class_list = np.array([result["f1_per_class"] for result in result_list])
+#
+#     fig, ax = plt.subplots(ncols=2, figsize=(10, 5))
+#
+#     ax[0].plot(np.arange(0, 1, .1), f1_macro_list)
+#
+#     class_labels = ["Embeded teeth", "Caries", "Apical lesion", "Deep caries", "Healthy"]
+#     for i in range(f1_per_class_list.shape[1]):
+#         ax[1].plot(f1_per_class_list[:, i], label=class_labels[i])
+#
+#     print(np.argmax(f1_per_class_list, axis=0))
+#     ax[0].set_title("F1 macro-averaged")
+#     ax[1].set_title("F1 per class")
+#     ax[1].legend(loc="upper left")
+#     plt.show()
+#     # plt.savefig("f1_at_different_thresholds.png")
+
+
 import matplotlib.pyplot as plt
 import numpy as np
 import SimpleITK as sitk
 import yaml
+from tqdm import tqdm
 
 from src.model.faster_rcnn.faster_rcnn import FasterRCNN
 
@@ -59,26 +114,21 @@ list_ids = [
 ]
 
 if __name__ == "__main__":
-    # image_acc = []
-    # for i in range(3):
-    #     # Read image
-    #     image = plt.imread(f"data/raw/validation_data/quadrant_enumeration_disease/xrays/val_{i}.png")
-    #
-    #     # Pad images (max height 1536 max width 3076)
-    #     image = np.pad(image, ((0, 1536 - image.shape[0]), (0, 3076 - image.shape[1]), (0, 0)))
-    #
-    #     # Store images
-    #     image_acc.append(image)
-    #
-    # # Convert the NumPy array to a SimpleITK Image
-    # image_acc = np.array(image_acc)
-    # image_acc = image_acc.transpose(1, 2, 0, 3)
-    # image_acc = sitk.GetImageFromArray(image_acc)
-    #
-    # # Save as .mha
-    # sitk.WriteImage(image_acc, "input/images/panoramic-dental-xrays/input.mha")
-    with open("pretrained_models/faster_rcnn/version_3/hparams.yaml") as f:
-        config = yaml.safe_load(f)["config"]
-    config["pretrained"] = False
-    model = FasterRCNN.load_from_checkpoint(
-        "pretrained_models/faster_rcnn/version_3/checkpoints/epoch=epoch=88-val_loss=val_loss=0.81.ckpt", config=config)
+    image_acc = []
+    for i in tqdm(range(len(list_ids)), total=len(list_ids)):
+        # Read image
+        image = plt.imread(f"data/raw/validation_data/quadrant_enumeration_disease/xrays/val_{i}.png")
+
+        # Pad images (max height 1536 max width 3076)
+        image = np.pad(image, ((0, 1536 - image.shape[0]), (0, 3076 - image.shape[1]), (0, 0)))
+
+        # Store images
+        image_acc.append(image)
+
+    # Convert the NumPy array to a SimpleITK Image
+    image_acc = np.array(image_acc)
+    image_acc = image_acc.transpose(1, 2, 0, 3)
+    image_acc = sitk.GetImageFromArray(image_acc)
+
+    # Save as .mha
+    sitk.WriteImage(image_acc, "input/images/panoramic-dental-xrays/input.mha")

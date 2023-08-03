@@ -2,6 +2,7 @@ import glob
 
 from tqdm import tqdm
 import nibabel as nib
+import numpy as np
 
 if __name__ == "__main__":
     masks = glob.glob("data/raw/masks/*")
@@ -12,4 +13,7 @@ if __name__ == "__main__":
         quadrant = mask_name.split("_")[2]
         id = mask_name.split("_")[4]
         target = nib.load(mask)
-        nib.save(target, f"data/final/masks/{disease}_{tooth}_{quadrant}_train_{id}_Segmentation.nii")
+
+        # Save everything that is binary
+        if np.array_equal(np.unique(target.get_fdata()), [0, 1]):
+            nib.save(target, f"data/final/masks/{disease}_{tooth}_{quadrant}_train_{id}_Segmentation.nii")

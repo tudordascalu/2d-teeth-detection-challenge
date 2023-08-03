@@ -2,7 +2,7 @@ import itertools
 
 import torchmetrics
 from pytorch_lightning import LightningModule
-from torch.nn import CrossEntropyLoss, BCEWithLogitsLoss
+from torch.nn import BCEWithLogitsLoss
 from torch.optim import RMSprop
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from src.model.unet.unet_components import *
@@ -36,6 +36,13 @@ class UNet(LightningModule):
         self.test_f1 = torchmetrics.F1Score("multilabel",
                                             average="macro",
                                             num_labels=5)
+        self.thresholds = torch.arange(0.1, 1.0, 0.1, dtype=torch.float32)
+        self.test_f1_threshold_list = [
+            torchmetrics.F1Score("multilabel", average="macro", num_labels=5, threshold=threshold.item())
+            for threshold in self.thresholds]
+        self.test_f1_per_class_threshold_list = [
+            torchmetrics.F1Score("multilabel", average=None, num_labels=5, threshold=threshold.item())
+            for threshold in self.thresholds]
 
         # Encoder
         self.inc = DoubleConv(1, 64)
@@ -152,6 +159,7 @@ class UNet(LightningModule):
     def test_step(self, test_batch, batch_idx):
         input, mask, label = test_batch["image"], test_batch["mask"], test_batch["label"]
         prediction = self.forward(input)
+        prediction_classification = torch.sigmoid(prediction["classification"])
 
         # Log metrics
         loss_segmentation = self._loss_segmentation(prediction["segmentation"], mask)
@@ -159,17 +167,28 @@ class UNet(LightningModule):
         self.log("test_loss_segmentation", loss_segmentation, prog_bar=True, on_step=True, on_epoch=True)
         self.log("test_loss_classification", loss_classification, prog_bar=True, on_step=True, on_epoch=True)
         self.log("test_dice_score", self.dice_score(prediction["segmentation"], mask), prog_bar=True, on_epoch=True)
-        self.log("test_f1", self.test_f1(prediction["classification"].softmax(dim=-1), label), on_step=False,
+        self.log("test_f1", self.test_f1(prediction_classification, label), on_step=False,
                  on_epoch=True)
-        self.test_f1_per_class.update(prediction["classification"].softmax(dim=-1), label)
+        self.test_f1_per_class.update(prediction_classification, label)
+
+        for threshold, test_f1, test_f1_per_class in zip(self.thresholds, self.test_f1_threshold_list,
+                                                         self.test_f1_per_class_threshold_list):
+            self.log(f"test_f1_{threshold}", test_f1(prediction_classification, label), on_step=False, on_epoch=True)
+            test_f1_per_class.update(prediction_classification, label)
 
     def on_test_epoch_end(self):
         f1_per_class = self.test_f1_per_class.compute()
+        f1_per_class_threshold = [test_f1_per_class.compute() for test_f1_per_class in
+                                  self.test_f1_per_class_threshold_list]
         self.test_f1_per_class.reset()
 
         # Log the per-class F1 scores
         for i, f1 in enumerate(f1_per_class):
             self.log(f'test_f1_class_{i}', f1)
+
+        for threshold, f1_per_class in zip(self.thresholds, f1_per_class_threshold):
+            for i, f1 in enumerate(f1_per_class):
+                self.log(f"test_f1_class_{i}_{threshold}", f1)
 
     def _loss_segmentation(self, prediction, target):
         # Use a combination of cross entropy and dice loss

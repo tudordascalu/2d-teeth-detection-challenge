@@ -6,7 +6,6 @@ import json
 import SimpleITK as sitk
 
 import torch
-import torch.nn.functional as F
 import yaml
 from torchvision.transforms import InterpolationMode, transforms
 
@@ -84,8 +83,9 @@ class PanoramicProcessor:
             map_location=self.device)
         self.faster_rcnn.eval()
         self.unet = UNet.load_from_checkpoint(
-            f"pretrained_models/unet/version_63/checkpoints/epoch=epoch=35-val_loss=val_loss=0.20.ckpt",
+            f"pretrained_models/unet/version_66/checkpoints/epoch=epoch=20-val_loss=val_loss=0.23.ckpt",
             map_location=self.device)
+        self.unet_threshold = torch.tensor([.7, .4, .8, .8, .1]).to(self.device)
         self.unet.eval()
 
         # Utilities
@@ -146,7 +146,9 @@ class PanoramicProcessor:
 
                 # Get labels
                 prediction = self.unet(image_crop.unsqueeze(0).to(self.device))
-                labels = torch.where(torch.sigmoid(prediction["classification"][0]) > .5)[0].detach().cpu().tolist()
+                prediction_probabilities = torch.sigmoid(prediction["classification"][0])
+                labels = torch.where(prediction_probabilities >= self.unet_threshold)[
+                    0].detach().cpu().tolist()
 
                 # Save labels
                 labels_2.append(labels)
