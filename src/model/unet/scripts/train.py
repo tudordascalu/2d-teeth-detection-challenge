@@ -73,8 +73,6 @@ if __name__ == "__main__":
 
     # Define model
     model = UNet(config)
-    model.update_classification_requires_grad(False)
-    model.update_segmentation_requires_grad(True)
 
     logger = loggers.TensorBoardLogger(save_dir=config["checkpoints_path"], name=None)
     trainer_args = dict(max_epochs=config["max_epochs"],

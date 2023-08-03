@@ -8,6 +8,6 @@
 ## Activate environment
 #conda activate ml-env
 # Train network
-echo "Training segmentation started.."
-python -m src.model.unet.scripts.train_segmentation
-echo "Training segmentation ended.."
+echo "Training started.."
+python -m src.model.unet.scripts.train
+echo "Training ended.."

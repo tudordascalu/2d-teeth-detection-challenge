@@ -3,12 +3,9 @@ data_dir: data
 output_path: output/
 checkpoints_path: checkpoints/unet/
 n_classes: 1
-mode: classification
-checkpoint_path: checkpoints/unet/version_66/checkpoints/epoch=epoch=20-val_loss=val_loss=0.23.ckpt
-#mode: segmentation
 
 # Model
-max_epochs: 300
+max_epochs: 100
 batch_size: 16
 learning_rate: 1e-4
-scheduler_patience: 30
+scheduler_patience: 15
