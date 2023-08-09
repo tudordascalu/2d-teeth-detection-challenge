@@ -1,4 +1,5 @@
-import numpy as np
+import json
+
 import torch
 import yaml
 from pytorch_lightning import Trainer
@@ -33,21 +34,20 @@ if __name__ == "__main__":
     ])
 
     # Load train val test splits
-    y_train, y_val, y_test = np.load(
-        f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_train.npy", allow_pickle=True), \
-        np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_val.npy", allow_pickle=True), \
-        np.load(f"data/final/y_quadrant_enumeration_disease_with_healthy_samples_unpacked_test.npy", allow_pickle=True)
+    with open("data/final/train_quadrant_enumeration_disease_healthy_unpacked_train.json") as f:
+        X_train = json.load(f)
+    with open("data/final/train_quadrant_enumeration_disease_healthy_unpacked_val.json") as f:
+        X_val = json.load(f)
 
-    dataset_args = dict(image_dir=f"{config['image_dir']}/{config['data_type']}/xrays", device=device)
-    dataset_train = ToothDataset(y_train, transform=transform_train, **dataset_args)
-    dataset_val = ToothDataset(y_val, transform=transform, **dataset_args)
-    dataset_test = ToothDataset(y_test, transform=transform, **dataset_args)
+    dataset_args = dict(image_dir=f"data/raw/training_data/quadrant_enumeration_disease/xrays", device=device)
+    dataset_train = ToothDataset(X_train, transform=transform_train, **dataset_args)
+    dataset_val = ToothDataset(X_val, transform=transform, **dataset_args)
 
     # Prepare weighted sampler for balancing class distribution across epochs
     encoder = LabelEncoder()
     targets = [
         sample["annotation"]["category_id_3"]
-        for sample in y_train
+        for sample in X_train
     ]
     targets_encoded = encoder.fit_transform(targets)
     class_sample_count = torch.bincount(torch.from_numpy(targets_encoded))
@@ -55,12 +55,24 @@ if __name__ == "__main__":
     samples_weight = torch.tensor([weight[t] for t in targets_encoded])
     sampler = WeightedRandomSampler(samples_weight, num_samples=len(samples_weight), replacement=True)
 
+    # In binary classification split labels in healthy vs unhealthy
+    if config["n_classes"] < 2:
+        for x in X_train:
+            if x["annotation"]["category_id_3"] == 4:
+                x["annotation"]["category_id_3"] = 0
+            else:
+                x["annotation"]["category_id_3"] = 1
+
+        for x in X_val:
+            if x["annotation"]["category_id_3"] == 4:
+                x["annotation"]["category_id_3"] = 0
+            else:
+                x["annotation"]["category_id_3"] = 1
+
     # Initialize loaders
-    loader_args = dict(batch_size=config["batch_size"], num_workers=0, pin_memory=True,
-                       collate_fn=ToothDataset.collate_fn)
+    loader_args = dict(batch_size=config["batch_size"], num_workers=0, pin_memory=True)
     loader_train = DataLoader(dataset_train, sampler=sampler, **loader_args)
     loader_val = DataLoader(dataset_val, **loader_args)
-    loader_test = DataLoader(dataset_test, **loader_args)
 
     # Define model
     model = Vgg(config)

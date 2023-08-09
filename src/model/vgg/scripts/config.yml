@@ -1,13 +1,11 @@
 # Data
-image_dir: data/raw/training_data
 output_path: output/
 checkpoints_path: checkpoints/vgg/
-data_type: quadrant_enumeration_disease # quadrant | quadrant_enumeration | quadrant_enumeration_disease
-n_classes: 4
-
+n_classes: 1
+unet_checkpoint: checkpoints/unet/version_67/checkpoints/epoch=epoch=84-val_loss=val_loss=0.32.ckpt
 
 # Model
-max_epochs: 200
+max_epochs: 100
 batch_size: 32
 learning_rate: 1e-3
 vgg_version: 16
