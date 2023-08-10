@@ -23,19 +23,19 @@ class Vgg(pl.LightningModule):
         if self.config["n_classes"] > 1:
             self.train_f1 = torchmetrics.F1Score("multilabel",
                                                  average="macro",
-                                                 num_classes=config["n_classes"])
+                                                 num_labels=config["n_classes"])
             self.val_f1 = torchmetrics.F1Score("multilabel",
                                                average="macro",
-                                               num_classes=config["n_classes"])
+                                               num_labels=config["n_classes"])
             self.val_f1_per_class = torchmetrics.F1Score("multilabel",
                                                          average=None,
-                                                         num_classes=config["n_classes"])
+                                                         num_labels=config["n_classes"])
             self.test_f1 = torchmetrics.F1Score("multilabel",
                                                 average="macro",
-                                                num_classes=config["n_classes"])
+                                                num_labels=config["n_classes"])
             self.test_f1_per_class = torchmetrics.F1Score("multilabel",
                                                           average=None,
-                                                          num_classes=config["n_classes"])
+                                                          num_labels=config["n_classes"])
         else:
             self.train_f1 = torchmetrics.F1Score("binary")
             self.val_f1 = torchmetrics.F1Score("binary")

@@ -7,5 +7,5 @@ unet_checkpoint: checkpoints/unet/version_67/checkpoints/epoch=epoch=84-val_loss
 # Model
 max_epochs: 100
 batch_size: 32
-learning_rate: 1e-3
+learning_rate: 1e-4
 vgg_version: 16
