@@ -85,4 +85,4 @@ if __name__ == "__main__":
         image = read_image(f"data/raw/validation_data/quadrant_enumeration_disease/xrays/{file_name}")[0]
         fig = draw_image_with_boxes(image, boxes, labels)
         plt.title(f"Red - Impacted; Green - Caries; Blue - Periapical lesion; Yellow - deep caries")
-        fig.savefig(f"visualizations/predictions_2/{file_name}")
+        fig.savefig(f"visualizations/predictions_3/{file_name}")

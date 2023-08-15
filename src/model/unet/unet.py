@@ -7,7 +7,7 @@ from src.utils.dice_score import DiceScore, DiceLoss
 
 
 class UNet(LightningModule):
-    def __init__(self, config):
+    def __init__(self, config=dict(learning_rate=1e-4, scheduler_patience=10)):
         super(UNet, self).__init__()
         self.save_hyperparameters()
 

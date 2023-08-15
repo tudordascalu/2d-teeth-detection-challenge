@@ -10,7 +10,7 @@ from src.model.unet.unet import UNet
 
 
 class Vgg(pl.LightningModule):
-    def __init__(self, config):
+    def __init__(self, config=dict(pretrained=False, n_classes=1, learning_rate=1e-4)):
         super().__init__()
         self.__dict__.update(locals())
 
@@ -37,14 +37,18 @@ class Vgg(pl.LightningModule):
                                                           average=None,
                                                           num_labels=config["n_classes"])
         else:
-            self.train_f1 = torchmetrics.F1Score("binary")
-            self.val_f1 = torchmetrics.F1Score("binary")
-            self.test_f1 = torchmetrics.F1Score("binary")
+            self.train_f1 = torchmetrics.F1Score("binary", average="macro")
+            self.val_f1 = torchmetrics.F1Score("binary", average="macro")
+            self.test_f1 = torchmetrics.F1Score("binary", average="macro")
         self.bce = BCEWithLogitsLoss()
 
         # Model
-        vgg16 = models.vgg16(weights=VGG16_Weights.DEFAULT)
-        unet = UNet.load_from_checkpoint(self.config["unet_checkpoint"])
+        if "pretrained" in self.config and self.config["pretrained"]:
+            vgg16 = models.vgg16(weights=VGG16_Weights.DEFAULT)
+            unet = UNet.load_from_checkpoint(self.config["unet_checkpoint"])
+        else:
+            vgg16 = models.vgg16(weights=None)
+            unet = UNet()
 
         # Prepare encoders
         self.vgg16_encoder = vgg16.features

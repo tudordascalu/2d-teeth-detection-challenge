@@ -6,15 +6,15 @@
 # import matplotlib.pyplot as plt
 #
 # if __name__ == "__main__":
-#     with open("output/unet_predict.json", "r") as f:
+#     with open("output/vgg_predict.json", "r") as f:
 #         data = json.load(f)
 #
 #     threshold_list = torch.arange(0, 1, .1)
 #     f1_per_class_list = [
-#         torchmetrics.F1Score("multilabel", average=None, num_labels=5, threshold=threshold.item())
+#         torchmetrics.F1Score("multilabel", average=None, num_labels=4, threshold=threshold.item())
 #         for threshold in threshold_list]
 #     f1_macro_list = [
-#         torchmetrics.F1Score("multilabel", average="macro", num_labels=5, threshold=threshold.item())
+#         torchmetrics.F1Score("multilabel", average="macro", num_labels=4, threshold=threshold.item())
 #         for threshold in threshold_list]
 #
 #     # Extract predictions

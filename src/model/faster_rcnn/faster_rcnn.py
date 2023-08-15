@@ -15,7 +15,7 @@ class FasterRCNN(pl.LightningModule):
         self.save_hyperparameters()
         self.config = config
         # Load the pretrained Faster R-CNN model with ResNet-50 backbone
-        if self.config["pretrained"]:
+        if "pretrained" in self.config and self.config["pretrained"]:
             self.model = torchvision.models.detection.fasterrcnn_resnet50_fpn(
                 weights=FasterRCNN_ResNet50_FPN_Weights.COCO_V1,
                 weights_backbone=ResNet50_Weights.IMAGENET1K_V1)

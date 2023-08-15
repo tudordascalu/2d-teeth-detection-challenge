@@ -28,10 +28,11 @@ if __name__ == "__main__":
         labels = [annotation["category_id_3"] for annotation in sample["annotations"]]
 
         # Draw boxes
-        for box, label in zip(boxes, labels):
-            draw.rectangle(box, outline=colors[label], width=4)
+        for annotation in sample["annotations"]:
+            if "score" not in annotation or annotation["score"] >= .9:
+                draw.rectangle(annotation["bbox"], outline=colors[annotation["category_id_3"]], width=4)
 
         # Save image
-        if not os.path.exists("visualizations/quadrant_enumeration_disease_healthy"):
-            os.mkdir("visualizations/quadrant_enumeration_disease_healthy")
-        image_pil.save(f"visualizations/quadrant_enumeration_disease_healthy/{file_name}")
+        if not os.path.exists("visualizations/quadrant_enumeration_disease_healthy_.9"):
+            os.mkdir("visualizations/quadrant_enumeration_disease_healthy_.9")
+        image_pil.save(f"visualizations/quadrant_enumeration_disease_healthy_.9/{file_name}")

@@ -3,6 +3,7 @@ output_path: output/
 checkpoints_path: checkpoints/vgg/
 n_classes: 1
 unet_checkpoint: checkpoints/unet/version_67/checkpoints/epoch=epoch=84-val_loss=val_loss=0.32.ckpt
+pretrained: True
 
 # Model
 max_epochs: 100
