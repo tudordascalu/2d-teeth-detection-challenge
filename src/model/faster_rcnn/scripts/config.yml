@@ -1,14 +1,13 @@
 # Data
-image_dir: data/raw/training_data
 output_path: output/
 checkpoints_path: checkpoints/faster_rcnn/
-data_type: quadrant_enumeration
 
 # Model
 max_epochs: 200
 batch_size: 16
 learning_rate: 1e-3
-n_teeth: 32
+n_classes: 5
+pretrained: True
 
 # Augmentation
 p_flip: 0

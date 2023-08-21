@@ -1,6 +1,5 @@
 import json
 
-import numpy as np
 from sklearn.model_selection import train_test_split
 
 
@@ -23,7 +22,7 @@ if __name__ == "__main__":
     p_test = 0.15
 
     # Load data
-    with open("data/processed/train_quadrant_enumeration_disease_healthy_unpacked.json") as f:
+    with open("data/processed/train_quadrant_enumeration_disease.json") as f:
         X = json.load(f)
 
     # Extract combination of tooth-disease labels for stratification
@@ -37,5 +36,5 @@ if __name__ == "__main__":
 
     # Save results
     for split, x_split in zip(["train", "val", "test"], [X_train, X_val, X_test]):
-        with open(f"data/final/train_quadrant_enumeration_disease_healthy_unpacked_{split}.json", "w") as f:
+        with open(f"data/final/train_quadrant_enumeration_disease_{split}.json", "w") as f:
             json.dump(x_split, f, indent=4)
