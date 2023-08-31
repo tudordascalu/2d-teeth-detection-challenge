@@ -1,50 +1,18 @@
 # Scope
 
-This project aims to build an object detection model that identifies teeth with problems.
+This project aims to build an object detection model that identifies teeth with abnormalities.
 
-# Issues
+## Dataset description
 
-## Enumeration
+The dataset consists of 2D panoramic X-rays: https://zenodo.org/record/7812323#.ZDQE1uxBwUG.
 
-- contrast: train_107, train_165, train_236, train_220
-- appliance (solvable with inter-teeth dependencies): train_397, train_107, train_564, train_92, train_222, train_404,
-  train_208, train_389, train_84
-- missing teeth: train_299, train_206, train_523, train_580
-- noise: train_576
-- wisdom: train_157, train_307, train_484, train_328, train_541
-- other: train_607, train_70
+## Our model
 
-# TODOs
+We proposed a multi-step framework that consists of: detection
+of dental instances, filtering of healthy instances, and classification of abnormal
+instances.
 
-## Instance identifier
-
-Implement an instance identifier following the 3d solution submitted for MICCAI:
-
-- measure inter-tooth statistics
-- create sample-wise feature matrix using statistics
-- design and train network that outputs instance-label pairs
-- evaluate improvement compared to FasterRCNN
-
-## Augmentation: in-paiting for authentic tooth removal
-
-Implement solution for generating more samples with appliances, carious lesions, missing teeth by training a GAN to
-in-paint teeth.
-
-- identify affected teeth
-- train GAN
-- use data for tuning model
-
-## Augmentation: affine transformations during training
-
-
-# Results
-
-- checkpoints/faster_rcnn/version_3/
-┏━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃        Test metric        ┃       DataLoader 0        ┃
-┡━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│          ap/test          │    0.49480682611465454    │
-│        ap_50/test         │    0.8968981504440308     │
-│        ap_75/test         │    0.4815780222415924     │
-│       mar_100/test        │    0.6076436638832092     │
-└───────────────────────────┴───────────────────────────┘
+1. Detection of dental instances: We apply Faster-RCNN to identify all teeth in the panoramic X-ray.
+2. Filtering of healthy instances: We integrate the encoding path from a pretrained U-net for dental lesion detection
+   into the Vgg16 architecture for binary classification of cropped teeth.
+3. Classification of abnormal instances: We use the same architecture as in 2 to classify the abnormal teeth.
