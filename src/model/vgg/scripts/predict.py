@@ -7,8 +7,6 @@ from torchvision.transforms import transforms
 from tqdm import tqdm
 
 from src.data.tooth_dataset import ToothDataset
-from src.data.tooth_segmentation_dataset import ToothSegmentationDataset
-from src.model.unet.unet import UNet
 from src.model.vgg.vgg import Vgg
 from src.utils.transforms import SquarePad
 
